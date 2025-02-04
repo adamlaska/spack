@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -17,7 +16,7 @@ class Dock(Package):
 
     homepage = "http://dock.compbio.ucsf.edu/DOCK_6/index.htm"
     url = "file://{0}/dock.6.9_source.tar.gz".format(os.getcwd())
-    maintainers = ["snehring"]
+    maintainers("snehring")
     manual_download = True
 
     version("6.9", sha256="c2caef9b4bb47bb0cb437f6dc21f4c605fd3d0d9cc817fa13748c050dc87a5a8")
@@ -29,16 +28,11 @@ class Dock(Package):
     depends_on("mpi", when="+mpi")
 
     def setup_build_environment(self, env):
-        if "+mpi" in self.spec:
+        if self.spec.satisfies("+mpi"):
             env.set("MPICH_HOME", self.spec["mpi"].prefix)
 
     def install(self, spec, prefix):
-        compiler_targets = {
-            "gcc": "gnu",
-            "intel": "intel",
-            "pgi": "pgi",
-            "sgi": "sgi",
-        }
+        compiler_targets = {"gcc": "gnu", "intel": "intel", "sgi": "sgi"}
 
         if self.compiler.name not in compiler_targets:
             template = "Unsupported compiler {0}! Supported compilers: {1}"
@@ -46,14 +40,11 @@ class Dock(Package):
 
             raise InstallError(err)
 
-        if self.compiler.name == "pgi" and "+mpi" in spec:
-            raise InstallError("Parallel output is not supported with pgi.")
-
         with working_dir("install"):
             sh_args = ["./configure", compiler_targets[self.compiler.name]]
             config_source = compiler_targets[self.compiler.name]
 
-            if "+mpi" in spec:
+            if spec.satisfies("+mpi"):
                 sh_args.append("parallel")
                 config_source = config_source + ".parallel"
 

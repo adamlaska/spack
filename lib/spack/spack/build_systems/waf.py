@@ -1,22 +1,39 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
-
-
-import inspect
-
 from llnl.util.filesystem import working_dir
 
-from spack.directives import depends_on
-from spack.package_base import PackageBase, run_after
+import spack.builder
+import spack.package_base
+import spack.phase_callbacks
+import spack.spec
+import spack.util.prefix
+from spack.directives import build_system, depends_on
+
+from ._checks import BuilderWithDefaults, execute_build_time_tests, execute_install_time_tests
 
 
-class WafPackage(PackageBase):
+class WafPackage(spack.package_base.PackageBase):
     """Specialized class for packages that are built using the
     Waf build system. See https://waf.io/book/ for more information.
+    """
 
-    This class provides the following phases that can be overridden:
+    # To be used in UI queries that require to know which
+    # build-system class we are using
+    build_system_class = "WafPackage"
+    #: Legacy buildsystem attribute used to deserialize and install old specs
+    legacy_buildsystem = "waf"
+
+    build_system("waf")
+    # Much like AutotoolsPackage does not require automake and autoconf
+    # to build, WafPackage does not require waf to build. It only requires
+    # python to run the waf build script.
+    depends_on("python@2.5:", type="build", when="build_system=waf")
+
+
+@spack.builder.builder("waf")
+class WafBuilder(BuilderWithDefaults):
+    """The WAF builder provides the following phases that can be overridden:
 
     * configure
     * build
@@ -40,23 +57,31 @@ class WafPackage(PackageBase):
     function, which passes ``--prefix=/path/to/installation/prefix``.
     """
 
-    # Default phases
-    phases = ["configure", "build", "install"]
+    phases = ("configure", "build", "install")
 
-    # To be used in UI queries that require to know which
-    # build-system class we are using
-    build_system_class = "WafPackage"
+    #: Names associated with package methods in the old build-system format
+    legacy_methods = (
+        "build_test",
+        "install_test",
+        "configure_args",
+        "build_args",
+        "install_args",
+        "build_test",
+        "install_test",
+    )
+
+    #: Names associated with package attributes in the old build-system format
+    legacy_attributes = (
+        "build_time_test_callbacks",
+        "build_directory",
+        "install_time_test_callbacks",
+    )
 
     # Callback names for build-time test
     build_time_test_callbacks = ["build_test"]
 
     # Callback names for install-time test
     install_time_test_callbacks = ["install_test"]
-
-    # Much like AutotoolsPackage does not require automake and autoconf
-    # to build, WafPackage does not require waf to build. It only requires
-    # python to run the waf build script.
-    depends_on("python@2.5:", type="build")
 
     @property
     def build_directory(self):
@@ -65,18 +90,20 @@ class WafPackage(PackageBase):
 
     def python(self, *args, **kwargs):
         """The python ``Executable``."""
-        inspect.getmodule(self).python(*args, **kwargs)
+        self.pkg.module.python(*args, **kwargs)
 
     def waf(self, *args, **kwargs):
         """Runs the waf ``Executable``."""
-        jobs = inspect.getmodule(self).make_jobs
+        jobs = self.pkg.module.make_jobs
 
         with working_dir(self.build_directory):
             self.python("waf", "-j{0}".format(jobs), *args, **kwargs)
 
-    def configure(self, spec, prefix):
+    def configure(
+        self, pkg: WafPackage, spec: spack.spec.Spec, prefix: spack.util.prefix.Prefix
+    ) -> None:
         """Configures the project."""
-        args = ["--prefix={0}".format(self.prefix)]
+        args = ["--prefix={0}".format(self.pkg.prefix)]
         args += self.configure_args()
 
         self.waf("configure", *args)
@@ -85,7 +112,9 @@ class WafPackage(PackageBase):
         """Arguments to pass to configure."""
         return []
 
-    def build(self, spec, prefix):
+    def build(
+        self, pkg: WafPackage, spec: spack.spec.Spec, prefix: spack.util.prefix.Prefix
+    ) -> None:
         """Executes the build."""
         args = self.build_args()
 
@@ -95,7 +124,9 @@ class WafPackage(PackageBase):
         """Arguments to pass to build."""
         return []
 
-    def install(self, spec, prefix):
+    def install(
+        self, pkg: WafPackage, spec: spack.spec.Spec, prefix: spack.util.prefix.Prefix
+    ) -> None:
         """Installs the targets on the system."""
         args = self.install_args()
 
@@ -105,8 +136,6 @@ class WafPackage(PackageBase):
         """Arguments to pass to install."""
         return []
 
-    # Testing
-
     def build_test(self):
         """Run unit tests after build.
 
@@ -115,7 +144,7 @@ class WafPackage(PackageBase):
         """
         pass
 
-    run_after("build")(PackageBase._run_default_build_time_test_callbacks)
+    spack.phase_callbacks.run_after("build")(execute_build_time_tests)
 
     def install_test(self):
         """Run unit tests after install.
@@ -125,7 +154,4 @@ class WafPackage(PackageBase):
         """
         pass
 
-    run_after("install")(PackageBase._run_default_install_time_test_callbacks)
-
-    # Check that self.prefix is there after installation
-    run_after("install")(PackageBase.sanity_check_prefix)
+    spack.phase_callbacks.run_after("install")(execute_install_time_tests)

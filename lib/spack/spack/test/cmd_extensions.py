@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -13,8 +12,6 @@ import spack.cmd
 import spack.config
 import spack.extensions
 import spack.main
-
-is_windows = sys.platform == "win32"
 
 
 class Extension:
@@ -105,9 +102,9 @@ def hello_world_with_module_in_root(extension_creator):
 
     @contextlib.contextmanager
     def _hwwmir(extension_name=None):
-        with extension_creator(
-            extension_name
-        ) if extension_name else extension_creator() as extension:
+        with (
+            extension_creator(extension_name) if extension_name else extension_creator()
+        ) as extension:
             # Note that the namespace of the extension is derived from the
             # fixture.
             extension.add_command(
@@ -212,7 +209,7 @@ def test_missing_command():
     """Ensure that we raise the expected exception if the desired command is
     not present.
     """
-    with pytest.raises(spack.extensions.CommandNotFoundError):
+    with pytest.raises(spack.cmd.CommandNotFoundError):
         spack.cmd.get_module("no-such-command")
 
 
@@ -222,9 +219,9 @@ def test_missing_command():
         ("/my/bad/extension", spack.extensions.ExtensionNamingError),
         ("", spack.extensions.ExtensionNamingError),
         ("/my/bad/spack--extra-hyphen", spack.extensions.ExtensionNamingError),
-        ("/my/good/spack-extension", spack.extensions.CommandNotFoundError),
-        ("/my/still/good/spack-extension/", spack.extensions.CommandNotFoundError),
-        ("/my/spack-hyphenated-extension", spack.extensions.CommandNotFoundError),
+        ("/my/good/spack-extension", spack.cmd.CommandNotFoundError),
+        ("/my/still/good/spack-extension/", spack.cmd.CommandNotFoundError),
+        ("/my/spack-hyphenated-extension", spack.cmd.CommandNotFoundError),
     ],
     ids=["no_stem", "vacuous", "leading_hyphen", "basic_good", "trailing_slash", "hyphenated"],
 )
@@ -274,7 +271,7 @@ def test_variable_in_extension_path(config, working_env):
     os.environ["_MY_VAR"] = os.path.join("my", "var")
     ext_paths = [os.path.join("~", "${_MY_VAR}", "spack-extension-1")]
     # Home env variable is USERPROFILE on Windows
-    home_env = "USERPROFILE" if is_windows else "HOME"
+    home_env = "USERPROFILE" if sys.platform == "win32" else "HOME"
     expected_ext_paths = [
         os.path.join(os.environ[home_env], os.environ["_MY_VAR"], "spack-extension-1")
     ]

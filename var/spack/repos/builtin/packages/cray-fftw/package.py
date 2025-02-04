@@ -1,7 +1,8 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
+
+import llnl.util.lang
 
 from spack.package import *
 
@@ -21,7 +22,7 @@ class CrayFftw(Package):
     homepage = "https://support.hpe.com/"
     has_code = False  # Skip attempts to fetch source that is not available
 
-    maintainers = ["haampie", "lukebroskop"]
+    maintainers("haampie", "lukebroskop")
 
     version("3.3.8.12")
     version("3.3.8.8")
@@ -51,15 +52,11 @@ class CrayFftw(Package):
 
     @property
     def libs(self):
-
         # Reduce repetitions of entries
         query_parameters = list(llnl.util.lang.dedupe(self.spec.last_query.extra_parameters))
 
         # List of all the suffixes associated with float precisions
-        precisions = [
-            ("float", "f"),
-            ("double", ""),
-        ]
+        precisions = [("float", "f"), ("double", "")]
 
         # Retrieve the correct suffixes, or use double as a default
         suffixes = [v for k, v in precisions if k in query_parameters] or [""]

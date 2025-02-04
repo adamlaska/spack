@@ -1,13 +1,11 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 # ----------------------------------------------------------------------------
 
 import os
 
-import llnl.util.tty as tty
-
+import spack.tengine
 from spack.package import *
 
 
@@ -24,7 +22,7 @@ class GaussianView(Package):
     homepage = "https://gaussian.com/gaussview6/"
     manual_download = True
 
-    maintainers = ["antoniokaust", "dev-zero"]
+    maintainers("antoniokaust", "dev-zero")
 
     version(
         "6.1.6",
@@ -34,22 +32,11 @@ class GaussianView(Package):
 
     version(
         "6.0.16",
-        "5dd6a8df8c81763e43a308b3a18d2d3b825d3597e9628dcf43e563d1867b9638",
+        sha256="5dd6a8df8c81763e43a308b3a18d2d3b825d3597e9628dcf43e563d1867b9638",
         extension="tbz",
     )
 
-    variant(
-        "gaussian-src",
-        default=False,
-        description="Use gaussian-src instead of gaussian (prebuilt binary)",
-    )
-
     depends_on("gaussian@16-B.01", type="run", when="@:6.0")
-    # TODO: add the checksum for gaussian@16-C.01 before uncommenting
-    # depends_on('gaussian@16-C.01', type='run', when='~gaussian-src@6.1:')
-    depends_on("gaussian-src@16-C.01", type="run", when="+gaussian-src@6.1:")
-
-    conflicts("+gaussian-src", when="@:6.0")
 
     depends_on("libx11", type=("run", "link"))
     depends_on("libxext", type=("run", "link"))
@@ -102,7 +89,7 @@ read through it and then execute it:
 If you have to give others access, please customize the group membership of the package
 files as documented here:
 
-    https://spack.readthedocs.io/en/latest/build_settings.html#package-permissions""".format(
+    https://spack.readthedocs.io/en/latest/packages_yaml.html#package-permissions""".format(
                 perm_script_path
             )
         )

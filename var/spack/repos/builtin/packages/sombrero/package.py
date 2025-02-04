@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -13,6 +12,8 @@ class Sombrero(MakefilePackage):
 
     homepage = "https://github.com/sa2c/sombrero"
     url = "https://github.com/sa2c/sombrero/archive/refs/tags/1.0.tar.gz"
+
+    license("GPL-2.0-only")
 
     version(
         "2021-08-16", sha256="f62aa1934fef6a025449a9e037345043072be6198f92087853c58c67f1342f73"
@@ -34,9 +35,11 @@ class Sombrero(MakefilePackage):
         deprecated=True,
     )
 
+    depends_on("c", type="build")  # generated
+
     depends_on("mpi")
 
-    maintainers = ["mmesiti", "edbennett"]
+    maintainers("mmesiti", "edbennett")
 
     def edit(self, spec, prefix):
         # Make the `sombrero.sh` driver relocatable

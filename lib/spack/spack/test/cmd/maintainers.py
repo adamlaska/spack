@@ -1,9 +1,6 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
-
-from __future__ import print_function
 
 import re
 
@@ -14,6 +11,8 @@ import spack.repo
 
 maintainers = spack.main.SpackCommand("maintainers")
 
+MAINTAINED_PACKAGES = ["maintainers-1", "maintainers-2", "maintainers-3", "py-extension1"]
+
 
 def split(output):
     """Split command line output into an array."""
@@ -23,14 +22,12 @@ def split(output):
 
 def test_maintained(mock_packages):
     out = split(maintainers("--maintained"))
-    assert out == ["maintainers-1", "maintainers-2"]
+    assert out == MAINTAINED_PACKAGES
 
 
 def test_unmaintained(mock_packages):
     out = split(maintainers("--unmaintained"))
-    assert out == sorted(
-        set(spack.repo.all_package_names()) - set(["maintainers-1", "maintainers-2"])
-    )
+    assert out == sorted(set(spack.repo.all_package_names()) - set(MAINTAINED_PACKAGES))
 
 
 def test_all(mock_packages, capfd):
@@ -43,38 +40,53 @@ def test_all(mock_packages, capfd):
         "maintainers-2:",
         "user2,",
         "user3",
+        "maintainers-3:",
+        "user0,",
+        "user1,",
+        "user2,",
+        "user3",
+        "py-extension1:",
+        "user1,",
+        "user2",
     ]
 
     with capfd.disabled():
         out = split(maintainers("--all", "maintainers-1"))
-    assert out == [
-        "maintainers-1:",
-        "user1,",
-        "user2",
-    ]
+    assert out == ["maintainers-1:", "user1,", "user2"]
 
 
 def test_all_by_user(mock_packages, capfd):
     with capfd.disabled():
         out = split(maintainers("--all", "--by-user"))
     assert out == [
+        "user0:",
+        "maintainers-3",
         "user1:",
-        "maintainers-1",
+        "maintainers-1,",
+        "maintainers-3,",
+        "py-extension1",
         "user2:",
         "maintainers-1,",
-        "maintainers-2",
+        "maintainers-2,",
+        "maintainers-3,",
+        "py-extension1",
         "user3:",
-        "maintainers-2",
+        "maintainers-2,",
+        "maintainers-3",
     ]
 
     with capfd.disabled():
         out = split(maintainers("--all", "--by-user", "user1", "user2"))
     assert out == [
         "user1:",
-        "maintainers-1",
+        "maintainers-1,",
+        "maintainers-3,",
+        "py-extension1",
         "user2:",
         "maintainers-1,",
-        "maintainers-2",
+        "maintainers-2,",
+        "maintainers-3,",
+        "py-extension1",
     ]
 
 
@@ -108,7 +120,7 @@ def test_maintainers_list_packages(mock_packages, capfd):
 
 
 def test_maintainers_list_fails(mock_packages, capfd):
-    out = maintainers("a", fail_on_error=False)
+    out = maintainers("pkg-a", fail_on_error=False)
     assert not out
     assert maintainers.returncode == 1
 
@@ -116,16 +128,16 @@ def test_maintainers_list_fails(mock_packages, capfd):
 def test_maintainers_list_by_user(mock_packages, capfd):
     with capfd.disabled():
         out = split(maintainers("--by-user", "user1"))
-    assert out == ["maintainers-1"]
+    assert out == ["maintainers-1", "maintainers-3", "py-extension1"]
 
     with capfd.disabled():
         out = split(maintainers("--by-user", "user1", "user2"))
-    assert out == ["maintainers-1", "maintainers-2"]
+    assert out == ["maintainers-1", "maintainers-2", "maintainers-3", "py-extension1"]
 
     with capfd.disabled():
         out = split(maintainers("--by-user", "user2"))
-    assert out == ["maintainers-1", "maintainers-2"]
+    assert out == ["maintainers-1", "maintainers-2", "maintainers-3", "py-extension1"]
 
     with capfd.disabled():
         out = split(maintainers("--by-user", "user3"))
-    assert out == ["maintainers-2"]
+    assert out == ["maintainers-2", "maintainers-3"]

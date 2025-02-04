@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -18,7 +17,7 @@ class Molcas(CMakePackage):
     url = "file://{0}/molcas8.2.tar.gz".format(os.getcwd())
     manual_download = True
 
-    version("8.2", "25b5fb8e1338b458a3eaea0b3d3b5e58")
+    version("8.2", md5="25b5fb8e1338b458a3eaea0b3d3b5e58")
 
     # Licensing
     license_required = True

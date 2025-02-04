@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -7,17 +6,21 @@ from spack.package import *
 
 
 class Mpip(AutotoolsPackage):
-
     """mpiP: Lightweight, Scalable MPI Profiling"""
 
     homepage = "https://software.llnl.gov/mpiP/"
     url = "https://github.com/LLNL/mpiP/releases/download/3.5/mpip-3.5.tgz"
     git = "https://github.com/llnl/mpip.git"
-    maintainers = ["cchambreau"]
+    maintainers("cchambreau")
+
+    license("Unlicense")
 
     version("master", branch="master")
     version("3.5", sha256="e366843d53fa016fb03903e51c8aac901aa5155edabe64698a8d6fa618a03bbd")
-    version("3.4.1", sha256="66a86dafde61546be80a130c46e4295f47fb764cf312ae62c70a6dc456a59dac")
+
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+    depends_on("fortran", type="build")  # generated
 
     variant("demangling", default=True, description="Build with demangling support")
 
@@ -56,14 +59,12 @@ class Mpip(AutotoolsPackage):
     conflicts("platform=darwin")
 
     # make-wrappers.py wrapper generator script requires python
-    depends_on("python@2:", when="@3.5:", type="build")
-    depends_on("python@:2", when="@3.4.1", type="build")
+    depends_on("python@2:", type="build")
     depends_on("mpi")
 
     #  '+setjmp' adds '--disable-libunwind' to the confiure args
-    depends_on("unwind", when="@3.5: +libunwind ~setjmp")
+    depends_on("unwind", when="+libunwind ~setjmp")
 
-    @when("@3.5:")
     def configure_args(self):
         spec = self.spec
 
@@ -122,21 +123,3 @@ class Mpip(AutotoolsPackage):
             targets.append("shared")
 
         return targets
-
-    @when("@3.4.1")
-    def configure_args(self):
-        config_args = ["--without-f77"]
-        config_args.append("--with-cc=%s" % self.spec["mpi"].mpicc)
-        config_args.append("--with-cxx=%s" % self.spec["mpi"].mpicxx)
-
-        if "+demangling" in self.spec:
-            config_args.append("--enable-demangling")
-        else:
-            config_args.append("--disable-demangling")
-
-        if "+setjmp" in self.spec:
-            config_args.append("--enable-setjmp")
-        else:
-            config_args.append("--disable-setjmp")
-
-        return config_args

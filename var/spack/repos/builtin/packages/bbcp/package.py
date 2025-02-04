@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -12,11 +11,15 @@ class Bbcp(Package):
     homepage = "https://www.slac.stanford.edu/~abh/bbcp/"
     git = "https://www.slac.stanford.edu/~abh/bbcp/bbcp.git"
 
-    version("master", branch="master")
+    maintainers("vanderwb")
 
-    depends_on("zlib")
+    # Stanford's git server does not support "smart https" shallow clones
+    version("master", branch="master", get_full_repo=True)
+
+    depends_on("zlib-api")
     depends_on("openssl")
     depends_on("libnsl")
+    depends_on("gmake", type="build")
 
     def install(self, spec, prefix):
         cd("src")

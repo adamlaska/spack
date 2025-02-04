@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -19,14 +18,21 @@ class NetcdfFortran(AutotoolsPackage):
     homepage = "https://www.unidata.ucar.edu/software/netcdf"
     url = "https://downloads.unidata.ucar.edu/netcdf-fortran/4.5.4/netcdf-fortran-4.5.4.tar.gz"
 
-    maintainers = ["skosukhin", "WardF"]
+    maintainers("skosukhin", "WardF")
 
+    license("Apache-2.0")
+
+    version("4.6.1", sha256="b50b0c72b8b16b140201a020936aa8aeda5c79cf265c55160986cd637807a37a")
+    version("4.6.0", sha256="198bff6534cc85a121adc9e12f1c4bc53406c403bda331775a1291509e7b2f23")
     version("4.5.4", sha256="0a19b26a2b6e29fab5d29d7d7e08c24e87712d09a5cafeea90e16e0a2ab86b81")
     version("4.5.3", sha256="123a5c6184336891e62cf2936b9f2d1c54e8dee299cfd9d2c1a1eb05dd668a74")
     version("4.5.2", sha256="b959937d7d9045184e9d2040a915d94a7f4d0185f4a9dceb8f08c94b0c3304aa")
     version("4.4.5", sha256="2467536ce29daea348c736476aa8e684c075d2f6cab12f3361885cb6905717b8")
     version("4.4.4", sha256="b2d395175f8d283e68c8be516e231a96b191ade67ad0caafaf7fa01b1e6b5d75")
     version("4.4.3", sha256="330373aa163d5931e475b5e83da5c1ad041e855185f24e6a8b85d73b48d6cda9")
+
+    depends_on("c", type="build")  # generated
+    depends_on("fortran", type="build")  # generated
 
     variant("pic", default=True, description="Produce position-independent code (for shared libs)")
     variant("shared", default=True, description="Enable shared library")
@@ -36,13 +42,11 @@ class NetcdfFortran(AutotoolsPackage):
     depends_on("netcdf-c@4.7.4:", when="@4.5.3:")  # nc_def_var_szip required
     depends_on("doxygen", when="+doc", type="build")
 
-    # The default libtool.m4 is too old to handle NAG compiler properly:
-    # https://github.com/Unidata/netcdf-fortran/issues/94
-    # Moreover, Libtool can't handle '-pthread' flag coming from libcurl,
-    # doesn't inject convenience libraries into the shared ones, and is unable
-    # to detect NAG when it is called with an MPI wrapper.
-    patch("nag_libtool_2.4.2.patch", when="@:4.4.4%nag")
-    patch("nag_libtool_2.4.6.patch", when="@4.4.5:%nag")
+    # We need to use MPI wrappers when building against static MPI-enabled NetCDF and/or HDF5:
+    with when("^netcdf-c~shared"):
+        depends_on("mpi", when="^netcdf-c+mpi")
+        depends_on("mpi", when="^netcdf-c+parallel-netcdf")
+        depends_on("mpi", when="^hdf5+mpi~shared")
 
     # Enable 'make check' for NAG, which is too strict.
     patch("nag_testing.patch", when="@4.4.5%nag")
@@ -61,6 +65,8 @@ class NetcdfFortran(AutotoolsPackage):
     # Parallel builds do not work in the fortran directory. This patch is
     # derived from https://github.com/Unidata/netcdf-fortran/pull/211
     patch("no_parallel_build.patch", when="@4.5.2")
+
+    filter_compiler_wrappers("nf-config", relative_root="bin")
 
     def flag_handler(self, name, flags):
         if name == "cflags":
@@ -105,7 +111,7 @@ class NetcdfFortran(AutotoolsPackage):
             return libs
 
         msg = "Unable to recursively locate {0} {1} libraries in {2}"
-        raise spack.error.NoLibrariesError(
+        raise NoLibrariesError(
             msg.format("shared" if shared else "static", self.spec.name, self.spec.prefix)
         )
 
@@ -131,60 +137,16 @@ class NetcdfFortran(AutotoolsPackage):
                 # configuration failure, we set the following cache variable:
                 config_args.append("ac_cv_func_MPI_File_open=yes")
 
+        if "~shared" in netcdf_c_spec:
+            nc_config = which("nc-config")
+            config_args.append("LIBS={0}".format(nc_config("--libs", output=str).strip()))
+            if any(s in netcdf_c_spec for s in ["+mpi", "+parallel-netcdf", "^hdf5+mpi~shared"]):
+                config_args.append("CC=%s" % self.spec["mpi"].mpicc)
+
         return config_args
 
-    @run_after("configure")
-    def patch_libtool(self):
-        """AOCC support for NETCDF-F"""
-        if "%aocc" in self.spec:
-            # Libtool does not fully support the compiler toolchain, therefore
-            # we have to patch the script. The C compiler normally gets
-            # configured correctly, the variables of interest in the
-            # 'BEGIN LIBTOOL CONFIG' section are set to non-empty values and,
-            # therefore, are not affected by the replacements below. A more
-            # robust solution would be to extend the filter_file function with
-            # an additional argument start_at and perform the replacements
-            # between the '# ### BEGIN LIBTOOL TAG CONFIG: FC' and
-            # '# ### END LIBTOOL TAG CONFIG: FC' markers for the Fortran
-            # compiler, and between the '# ### BEGIN LIBTOOL TAG CONFIG: F77'
-            # and '# ### END LIBTOOL TAG CONFIG: F77' markers for the Fortran 77
-            # compiler.
-
-            # How to pass a linker flag through the compiler:
-            filter_file(r'^wl=""$', 'wl="{0}"'.format(self.compiler.linker_arg), "libtool")
-
-            # Additional compiler flags for building library objects (we need
-            # this to enable shared libraries when building with ~pic). Note
-            # that the following will set fc_pic_flag for both FC and F77, which
-            # in the case of AOCC, should not be a problem. If it is, the
-            # aforementioned modification of the filter_file function could be
-            # a solution.
-            filter_file(
-                r'^pic_flag=""$', 'pic_flag=" {0}"'.format(self.compiler.fc_pic_flag), "libtool"
-            )
-
-            # The following is supposed to tell the compiler to use the GNU
-            # linker. However, the replacement does not happen (at least for
-            # NetCDF-Fortran 4.5.3) because the replaced substring (i.e. the
-            # first argument passed to the filter_file function) is not present
-            # in the file. The flag should probably be added to 'ldflags' in the
-            # flag_handler method above (another option is to add the flag to
-            # 'ldflags' in compilers.yaml automatically as it was done for other
-            # flags in https://github.com/spack/spack/pull/22219).
-            filter_file(
-                r"\${wl}-soname \$wl\$soname",
-                r"-fuse-ld=ld -Wl,-soname,\$soname",
-                "libtool",
-                string=True,
-            )
-
-        # TODO: resolve the NAG-related issues in a similar way: remove the
-        #  respective patch files and tune the generated libtool script instead.
-
-    @when("@:4.4.5")
     def check(self):
-        with working_dir(self.build_directory):
-            make("check", parallel=False)
+        make("check", parallel=self.spec.satisfies("@4.5:"))
 
     @run_after("install")
     def cray_module_filenames(self):
@@ -193,7 +155,7 @@ class NetcdfFortran(AutotoolsPackage):
         # To avoid warning messages when compiler user applications in both
         # cases, we create copies of all '*.mod' files in the prefix/include
         # with names in upper- and lowercase.
-        if self.spec.compiler.name != "cce":
+        if not self.spec.satisfies("%cce"):
             return
 
         with working_dir(self.spec.prefix.include):

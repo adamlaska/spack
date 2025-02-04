@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -19,9 +18,12 @@ class Hal(MakefilePackage):
     homepage = "https://github.com/ComparativeGenomicsToolkit/hal"
     url = "https://github.com/ComparativeGenomicsToolkit/hal/archive/release-V2.1.tar.gz"
 
-    version("2.1", "540255be1af55abf390359fe034b82d7e61bdf6c3277df3cc01259cd450994e5")
+    version("2.1", sha256="540255be1af55abf390359fe034b82d7e61bdf6c3277df3cc01259cd450994e5")
 
-    maintainers = ["ilbiondo"]
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+
+    maintainers("ilbiondo")
 
     # HAL expects to be compiled alongside sonlib so we need both the
     # source version and python library version
@@ -44,7 +46,6 @@ class Hal(MakefilePackage):
         env.set("sonLibRootDir", self.spec["sonlib"].prefix)
 
     def install(self, spec, prefix):
-
         # First the easy bit
 
         install_tree("bin", prefix.bin)
@@ -79,7 +80,6 @@ class Hal(MakefilePackage):
         ]
 
         for folder in haldirs:
-
             install_tree(folder, join_path(self.prefix, "hal", folder))
 
         install("__init__.py", join_path(self.prefix, "hal"))
@@ -97,7 +97,6 @@ class Hal(MakefilePackage):
         ]
 
         for pyfile in halpyfiles:
-
             install(pyfile, self.prefix.bin)
 
     # The hal directory is a python library so we set the path

@@ -1,14 +1,10 @@
-# Copyright 2013-2021 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-
 import os
-import shutil
 
 from spack.package import *
-from spack.repo import GitExe
 
 
 class Easi(CMakePackage):
@@ -19,60 +15,75 @@ class Easi(CMakePackage):
     homepage = "https://easyinit.readthedocs.io"
     git = "https://github.com/SeisSol/easi.git"
 
-    maintainers = ["ThrudPrimrose", "ravil-mobile", "krenzland"]
+    maintainers("Thomas-Ulrich", "davschneller", "vikaskurapati")
 
-    version("develop", branch="master")
-    version("1.1.2", tag="v1.1.2")
+    license("BSD-3-Clause")
+
+    version("master", branch="master")
+    version("1.5.1", tag="v1.5.1", commit="d12f3371ed26c7371e4efcc11e3cd468063ffdda")
+    version("1.5.0", tag="v1.5.0", commit="391698ab0072f66280d08441974c2bdb04a65ce0")
+    version("1.4.0", tag="v1.4.0", commit="0d8fcf936574d93ddbd1d9222d46a93d4b119231")
+    version("1.3.0", tag="v1.3.0", commit="99309a0fa78bf11d668c599b3ee469224f04d55b")
+    version("1.2.0", tag="v1.2.0", commit="305a119338116a0ceac6b68b36841a50250d05b1")
+    version("1.1.2", tag="v1.1.2", commit="4c87ef3b3dca9415d116ef102cb8de750ef7e1a0")
+
+    depends_on("cxx", type="build")  # generated
+    depends_on("fortran", type="build")  # generated
+
+    variant("python", default=True, description="Install python bindings")
+    extends("python", when="+python")
+    depends_on("mpi", when="+python")
 
     variant("asagi", default=True, description="build with ASAGI support")
     variant(
         "jit",
-        default="impalajit",
+        default="lua",
         description="build with JIT support",
         values=("impalajit", "impalajit-llvm", "lua"),
-        multi=False,
+        multi=True,
     )
 
     depends_on("asagi +mpi +mpi3", when="+asagi")
-    depends_on("yaml-cpp@0.6.2")
-    depends_on("impalajit-llvm@1.0.0", when="jit=impalajit-llvm")
-    depends_on("lua@5.3.2", when="jit=lua")
-    depends_on("git", type="build", when="jit=impalajit")
+    depends_on("yaml-cpp@0.6:")
+
+    conflicts("yaml-cpp@0.7", when="@1.4.0:1.5.0")
+
+    depends_on("impalajit@llvm-1.0.0", when="jit=impalajit-llvm")
+    depends_on("lua@5.3:5.4", when="jit=lua")
+    depends_on("impalajit@main", when="jit=impalajit")
+
+    depends_on("py-pybind11@2.6.2:", type="build", when="+python")
+
+    conflicts("jit=impalajit", when="jit=impalajit-llvm")
+    conflicts("jit=impalajit-llvm", when="jit=impalajit")
 
     conflicts("jit=impalajit", when="target=aarch64:")
     conflicts("jit=impalajit", when="target=ppc64:")
     conflicts("jit=impalajit", when="target=ppc64le:")
     conflicts("jit=impalajit", when="target=riscv64:")
 
-    def pre_build(self):
-        spec = self.spec
-        if "jit=impalajit" in spec:
-            impalajir_src = join_path(self.stage.source_path, "impalajit")
-            if os.path.isdir(impalajir_src):
-                shutil.rmtree(impalajir_src)
-
-            git_exe = GitExe()
-            git_exe("clone", "https://github.com/uphoffc/ImpalaJIT.git", impalajir_src)
-            with working_dir(join_path(impalajir_src, "build"), create=True):
-                cmake("..", "-DCMAKE_INSTALL_PREFIX={0}".format(self.spec.prefix))
-                make()
-                make("install")
-
     def cmake_args(self):
-        self.pre_build()
-
         args = []
         args.append(self.define_from_variant("ASAGI", "asagi"))
-
-        with_impala = "jit=impalajit" in self.spec
-        with_impala |= "jit=impalajit-llvm" in self.spec
-        if with_impala:
+        args.append(self.define_from_variant("PYTHON_BINDINGS", "python"))
+        self.define("PYBIND11_USE_FETCHCONTENT", False)
+        spec = self.spec
+        if spec.satisfies("jit=impalajit") or spec.satisfies("jit=impalajit-llvm"):
             args.append(self.define("IMPALAJIT", True))
-            backend_type = "llvm" if "jit=impalajit-llvm" in self.spec else "original"
+            backend_type = "llvm" if "jit=impalajit-llvm" in spec else "original"
             args.append(self.define("IMPALAJIT_BACKEND", backend_type))
-
-        if "jit=lua" in self.spec:
+        else:
             args.append(self.define("IMPALAJIT", False))
+
+        if spec.satisfies("jit=lua"):
             args.append(self.define("LUA", True))
 
+        if spec.satisfies("+python"):
+            args += [self.define("easi_INSTALL_PYTHONDIR", python_platlib)]
+
         return args
+
+    def setup_run_environment(self, env):
+        if self.spec.satisfies("+python"):
+            full_path = os.path.join(python_platlib, "easilib/cmake/easi/python_wrapper")
+            env.prepend_path("PYTHONPATH", full_path)

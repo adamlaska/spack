@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -13,13 +12,16 @@ class Ioapi(MakefilePackage):
 
     homepage = "https://www.cmascenter.org/ioapi/"
     url = "https://www.cmascenter.org/ioapi/download/ioapi-3.2.tar.gz"
-    maintainers = ["omsai"]
+    maintainers("omsai")
     # This checksum is somewhat meaningless because upstream updates the tarball
     # without incrementing the version despite requests no to do this.
     # Therefore the checksum fails everytime upstream silently updates the
     # source tarball (#28247).  This also means that one must test for breaking
     # changes when updating the checksum and avoid #22633.
     version("3.2", sha256="0a3cbf236ffbd9fb5f6509e35308c3353f1f53096efe0c51b84883d2da86924b")
+
+    depends_on("c", type="build")  # generated
+    depends_on("fortran", type="build")  # generated
     depends_on("netcdf-c@4:")
     depends_on("netcdf-fortran@4:")
     depends_on("sed", type="build")

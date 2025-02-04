@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -31,7 +30,7 @@ class Ds(AutotoolsPackage):
     depends_on("tk")
 
     def patch(self):
-        # the package provides it's own TCL utilities
+        # the package provides it's own Tcl utilities
         # compiling and manually setting paths for all of them is contrived
         # (most of the utilities are small and not included in spack)
 

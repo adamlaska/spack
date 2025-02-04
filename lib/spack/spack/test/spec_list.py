@@ -1,16 +1,17 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import itertools
 
 import pytest
 
+import spack.concretize
+from spack.installer import PackageInstaller
 from spack.spec import Spec
 from spack.spec_list import SpecList
 
 
-class TestSpecList(object):
+class TestSpecList:
     default_input = ["mpileaks", "$mpis", {"matrix": [["hypre"], ["$gccs", "$clangs"]]}, "libelf"]
 
     default_reference = {
@@ -23,12 +24,7 @@ class TestSpecList(object):
         "mpileaks",
         "zmpi@1.0",
         "mpich@3.0",
-        {
-            "matrix": [
-                ["hypre"],
-                ["%gcc@4.5.0", "%clang@3.3"],
-            ]
-        },
+        {"matrix": [["hypre"], ["%gcc@4.5.0", "%clang@3.3"]]},
         "libelf",
     ]
 
@@ -200,3 +196,29 @@ class TestSpecList(object):
         ]
         speclist = SpecList("specs", matrix)
         assert len(speclist.specs) == 1
+
+    def test_spec_list_exclude_with_abstract_hashes(self, mock_packages, install_mockery):
+        # Put mpich in the database so it can be referred to by hash.
+        mpich_1 = spack.concretize.concretize_one("mpich+debug")
+        mpich_2 = spack.concretize.concretize_one("mpich~debug")
+        PackageInstaller([mpich_1.package, mpich_2.package], explicit=True, fake=True).install()
+
+        # Create matrix and exclude +debug, which excludes the first mpich after its abstract hash
+        # is resolved.
+        speclist = SpecList(
+            "specs",
+            [
+                {
+                    "matrix": [
+                        ["mpileaks"],
+                        ["^callpath"],
+                        [f"^mpich/{mpich_1.dag_hash(5)}", f"^mpich/{mpich_2.dag_hash(5)}"],
+                    ],
+                    "exclude": ["^mpich+debug"],
+                }
+            ],
+        )
+
+        # Ensure that only mpich~debug is selected, and that the assembled spec remains abstract.
+        assert len(speclist.specs) == 1
+        assert speclist.specs[0] == Spec(f"mpileaks ^callpath ^mpich/{mpich_2.dag_hash(5)}")

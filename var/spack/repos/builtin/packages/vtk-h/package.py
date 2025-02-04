@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -8,8 +7,6 @@ import os
 import socket
 import sys
 from os import environ as env
-
-import llnl.util.tty as tty
 
 from spack.package import *
 
@@ -36,7 +33,7 @@ class VtkH(CMakePackage, CudaPackage):
     url = "https://github.com/Alpine-DAV/vtk-h/releases/download/v0.5.8/vtkh-v0.5.8.tar.gz"
     git = "https://github.com/Alpine-DAV/vtk-h.git"
 
-    maintainers = ["cyrush"]
+    maintainers("cyrush")
 
     version("develop", branch="develop", submodules=True)
     version("0.8.1", sha256="0cb1c84087e2b9385477fba3e7e197d6eabe1d366bd3bc87d7824e50dcdbe057")
@@ -59,6 +56,9 @@ class VtkH(CMakePackage, CudaPackage):
     version("0.5.4", sha256="92bf3741df7a15e36ff41a9a783f3b88eecc86e55cad1defba76f141baa2610b")
     version("0.5.3", sha256="0c4aae3bd2a5906738a6806de2b62ea2049ac8b40ebe7fc2ba25505272c2d359")
     version("0.5.2", sha256="db2e6250c0ece6381fc90540317ad7b5869dbcce0231ce9be125916a77bfdb25")
+
+    depends_on("cxx", type="build")  # generated
+    depends_on("fortran", type="build")  # generated
 
     variant("shared", default=True, description="Build vtk-h as shared libs")
     variant("mpi", default=True, description="build mpi support")
@@ -121,11 +121,9 @@ class VtkH(CMakePackage, CudaPackage):
 
     @run_before("cmake")
     def hostconfig(self):
+        """This method creates a 'host-config' file that specifies all of the options used to
+        configure and build vtkh."""
         spec = self.spec
-        """
-        This method creates a 'host-config' file that specifies
-        all of the options used to configure and build vtkh.
-        """
 
         if not os.path.isdir(spec.prefix):
             os.mkdir(spec.prefix)
@@ -178,6 +176,23 @@ class VtkH(CMakePackage, CudaPackage):
         cfg.write(cmake_cache_entry("CMAKE_C_COMPILER", c_compiler))
         cfg.write("# cpp compiler used by spack\n")
         cfg.write(cmake_cache_entry("CMAKE_CXX_COMPILER", cpp_compiler))
+
+        # use global spack compiler flags
+        cppflags = " ".join(spec.compiler_flags["cppflags"])
+        if cppflags:
+            # avoid always ending up with ' ' with no flags defined
+            cppflags += " "
+        cflags = cppflags + " ".join(spec.compiler_flags["cflags"])
+        if cflags:
+            cfg.write(cmake_cache_entry("CMAKE_C_FLAGS", cflags))
+        cxxflags = cppflags + " ".join(spec.compiler_flags["cxxflags"])
+        if cxxflags:
+            cfg.write(cmake_cache_entry("CMAKE_CXX_FLAGS", cxxflags))
+        fflags = " ".join(spec.compiler_flags["fflags"])
+        if self.spec.satisfies("%cce"):
+            fflags += " -ef"
+        if fflags:
+            cfg.write(cmake_cache_entry("CMAKE_Fortran_FLAGS", fflags))
 
         # shared vs static libs
         if "+shared" in spec:

@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -17,10 +16,12 @@ class ProcessInProcess(Package):
     homepage = "https://github.com/procinproc/procinproc.github.io"
     git = "https://github.com/procinproc/PiP.git"
 
-    maintainers = ["ahori"]
+    maintainers("ahori")
 
     conflicts("platform=darwin", msg="Darwin is not supported.")
     conflicts("platform=windows", msg="Windows is not supported.")
+
+    license("BSD-2-Clause-FreeBSD")
 
     # PiP version 1 is obsolete
     version("1", branch="pip-1", deprecated=True)
@@ -28,6 +29,8 @@ class ProcessInProcess(Package):
     version("2", branch="pip-2", preferred=True)
     # PiP version 3 is experimental and unstable yet
     version("3", branch="pip-3", deprecated=True)
+
+    depends_on("c", type="build")  # generated
 
     conflicts("%gcc@:3", when="os=centos7")
     conflicts("%gcc@5:", when="os=centos7")
@@ -45,6 +48,7 @@ class ProcessInProcess(Package):
         depends_on("systemtap")
         depends_on("libxml2")
         depends_on("pigz")
+    depends_on("gmake", type="build")
 
     # resources for PiP version 2
     #  PiP-glibc resource

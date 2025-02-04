@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -18,6 +17,8 @@ class PpopenApplAmrFdm(MakefilePackage):
 
     version("master", branch="APPL/FDM_AMR")
 
+    depends_on("fortran", type="build")  # generated
+
     depends_on("mpi")
 
     parallel = False
@@ -27,10 +28,7 @@ class PpopenApplAmrFdm(MakefilePackage):
         mkdirp("bin")
         mkdirp("lib")
         mkdirp("include")
-        fflags = [
-            "-O3",
-            "-I.",
-        ]
+        fflags = ["-O3", "-I."]
         makefile_in = FileFilter("Makefile.in")
         makefile_in.filter("^PREFIX +=.*", "PREFIX = {0}".format(prefix))
         makefile_in.filter("^INCDIR +=.*", "INCDIR = {0}/include".format(self.build_directory))

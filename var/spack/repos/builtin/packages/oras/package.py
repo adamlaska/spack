@@ -1,9 +1,7 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import llnl.util.tty as tty
 
 from spack.package import *
 
@@ -15,12 +13,15 @@ class Oras(Package):
     git = "https://github.com/oras-project/oras"
     url = "https://github.com/oras-project/oras/archive/refs/tags/v0.12.0.tar.gz"
 
-    maintainers = ["vsoch"]
+    maintainers("vsoch")
+
+    license("MIT")
 
     version("main", branch="main")
     version("0.12.0", sha256="5e19d61683a57b414efd75bd1b0290c941b8faace5fcc9d488f5e4aa674bf03e")
 
     depends_on("go", type="build")
+    depends_on("gmake", type="build")
 
     def setup_build_environment(self, env):
         # Point GOPATH at the top of the staging dir for the build step.
@@ -41,6 +42,6 @@ class Oras(Package):
 
         oras = find("bin", "oras")
         if not oras:
-            tty.die("Oras executable missing in bin.")
+            raise InstallError("Oras executable missing in bin.")
         tty.debug("Found oras executable %s to move into install bin" % oras[0])
         install(oras[0], prefix.bin)

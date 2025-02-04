@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -13,7 +12,7 @@ class Launchmon(AutotoolsPackage):
     homepage = "https://github.com/LLNL/LaunchMON"
     url = "https://github.com/LLNL/LaunchMON/releases/download/v1.0.2/launchmon-v1.0.2.tar.gz"
     git = "https://github.com/llnl/launchmon.git"
-    maintainers = ["lee218llnl"]
+    maintainers("lee218llnl")
 
     version("master", branch="master")
     version(
@@ -22,6 +21,9 @@ class Launchmon(AutotoolsPackage):
         url="https://github.com/LLNL/LaunchMON/releases/download/v1.2.0/launchmon-v1.2.0.tar.gz",
     )
     version("1.0.2", sha256="1d301ccccfe0873efcd66da87ed5e4d7bafc560b00aee396d8a9365f53b3a33a")
+
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
 
     depends_on("autoconf", type="build", when="@master")
     depends_on("automake", type="build", when="@master")

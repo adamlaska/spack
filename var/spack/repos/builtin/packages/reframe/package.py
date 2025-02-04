@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -21,9 +20,57 @@ class Reframe(Package):
     git = "https://github.com/eth-cscs/reframe.git"
 
     # notify when the package is updated.
-    maintainers = ["victorusu", "vkarak"]
+    maintainers("victorusu", "vkarak")
 
-    version("master", branch="master")
+    license("BSD-3-Clause")
+
+    version("develop", branch="develop")
+    version("4.6.3", sha256="0f335e588d21a26d76beb011bc86baf80ba633d875512ecd564d0aeb320fcf2c")
+    version("4.6.2", sha256="d3343815ee3d2c330b91a1cdb924ba184119ed7d9fc88a4a754b939a4259df82")
+    version("4.6.1", sha256="058b05c430af26d2958851af0da32bac0f4bff1af7d78ce6a132c32bbe40ec5c")
+    version("4.6.0", sha256="fcd29a419eebcb990b3e9be94b44e4ea59ce0de76f271e38f10cf5a6545ed29d")
+    version("4.5.2", sha256="3f8750d0cd53261c763f9403723d87fc87361a7b0f9ba38e237d6c570fdc50df")
+    version("4.5.1", sha256="8629c0adef897ccea971d6513f64acadf14e2532a543bc055213f2f5719436b5")
+    version("4.5.0", sha256="5d1773d0bc76c9cd74de8688aa508a14ac7dfcdcea65d7f9473821905c60dacb")
+    version("4.4.2", sha256="d773ce7f48fb177331f92920117d90cba3b9fea6b78f96f2bb83ad7239a55c3c")
+    version("4.4.1", sha256="0fc8c711ccf53be8a5c687572317040e55a4edd3d935421b5957b2d9f218a0fe")
+    version("4.4.0", sha256="3a5de3eab90a1b9ac5d1b272721602b1460eea6fbbda9ba691c38995f2ed3d2b")
+    version("4.3.4", sha256="6a38279dd58da63316143c6f58b92798c1fd9523d50876bc2df19769f1562d3b")
+    version("4.3.3", sha256="3d1a1a6d2c8e3b362dadc47f642f23f7574fb81b03be31055040afe9738829c2")
+    version("4.3.2", sha256="b4e42915cf3d6c7c0f975f12eecd609ae5f165b764989f4ee066a209ff0150ae")
+    version("4.3.1", sha256="63e149b516048d522c36d29c9961cba4d4e7fde9cfcdf9f599d7a1ca0358b9e0")
+    version("4.3.0", sha256="89a73695a6c963eb1a2e6807b019fbad25793261829e3a7032f0b61ac3db66c8")
+    version("4.2.2", sha256="c210999d506f7b0582f58f390c4e35bc89a38ca277915532f9fd68ff562e8ca9")
+    version("4.2.1", sha256="c33c5406227b3fa34ee489769cb178f9dd04ead353062c21a837f31c23205bbe")
+    version("4.2.0", sha256="f1d38133023b37d01fdee46b2bf472f8fd36bf410d1c909db043b9f9d7df6122")
+    version("4.1.3", sha256="33e56bdabbc80cb80ac519ad9c341b296788b0954492059410674eba86044740")
+    version("4.1.2", sha256="b33f44f977ed1942af5fcca0bac291daefb3353e05321832310a0c8d99d09bf6")
+    version("4.1.1", sha256="68f82248dc424197e5254ca5f364565de40ed392ec02b14e8e10cab3eaf5e563")
+    version("4.1.0", sha256="2f6f6793e53fd03cdc8e457b7ed4f9b2105213c26e9d5308c8f3824ea89c936c")
+    version("4.0.5", sha256="4902258e5a201cb72ef9dc175a0970dcfc5869f3270a198dcd8bc47cc1a3cabd")
+    version("4.0.4", sha256="a9fb10bf2dc01f721142453297e348084683acfc0b8caa38ad1daa1b5c66456e")
+    version("4.0.3", sha256="ae216b0ccfda9f5f5c09f0be46cf8ab04183a0c30edf581917767dc3bb8de010")
+    version("4.0.2", sha256="48ec55645256d8686e077c7a9d4d2aa7d327eec27ff2ae2c78dd1db818b76ec7")
+    version("4.0.1", sha256="1680b8f0dd405dcf98be23473570595a424cbee830b2dbb665459e2974723f6f")
+    version("4.0.0", sha256="50fc0462747b8b1f504912cd8072c49c46c1744567f4f1884e753abbe8d7c6e1")
+    version(
+        "4.0.0-dev.4", sha256="35d37ee2747807b539b2c5b75073619870371d1e0fed9778f2a33a8abd37b8a1"
+    )
+    version(
+        "4.0.0-dev.3", sha256="830f00bcf27f693e7c0288e53a7b7fcf5aa5721ba8d451e693da018cf4af9bf4"
+    )
+    version(
+        "4.0.0-dev.2", sha256="a02ed4077965e38a2897984b79d938a229b7e52095cd9d803e6121448efbde11"
+    )
+    version(
+        "4.0.0-dev.1", sha256="6db55c20b79764fc1f0e0a13de062850007425fa2c7f54a113b96adee50741ed"
+    )
+    version(
+        "4.0.0-dev.0", sha256="a96162a88a36ea0793836c492a39470010f6e63b8d9bd324c033614d27304fa6"
+    )
+    version("3.12.0", sha256="425cc546e24edd5b2dbfcdcb61dbbf723ca1a2a2977948e359e893514f5eb10f")
+    version("3.11.2", sha256="d6f36071df316d6a5ef5ce6f0477b3385d9dac5c1b82e54ae6954dc9b68f9440")
+    version("3.11.1", sha256="7f591cd8f4fbb2c6255cc8ea02e3814393355a8931ac883e9f57490fde699b63")
     version("3.11.0", sha256="3ddfef5482f0c304286a6c8f1ad0b3d75c4c61d0b9f9f8429b6157c189f2bb64")
     version("3.10.1", sha256="5fd649872bf93ba72a835896ea1a581b9b8c3e04150247be2359b95a7cdb89b5")
     version("3.10.0", sha256="b137f034be09abcf1bb8c3ceaf1a00d9c22c51c10738312eccf12c1c3e04b9ef")
@@ -60,6 +107,9 @@ class Reframe(Package):
     version("2.17.2", sha256="092241cdc15918040aacb922c806aecb59c5bdc3ff7db034a4f355d39aecc101")
     version("2.17.1", sha256="0b0d32a892607840a7d668f5dcea6f03f7022a26b23e5042a0faf5b8c41cb146")
 
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+
     variant("docs", default=False, description="Build ReFrame's man page documentation")
     variant("gelf", default=False, description="Add graylog handler support")
 
@@ -90,18 +140,11 @@ class Reframe(Package):
     # documentation dependencies
     depends_on("py-sphinx", when="+docs", type="build")
     depends_on("py-sphinx-rtd-theme", when="+docs", type="build")
+    depends_on("gmake", type="build")
 
     # sanity check
     sanity_check_is_file = ["bin/reframe"]
-    sanity_check_is_dir = [
-        "bin",
-        "config",
-        "docs",
-        "reframe",
-        "tutorials",
-        "unittests",
-        "cscs-checks",
-    ]
+    sanity_check_is_dir = ["bin", "config", "docs", "reframe", "tutorials", "unittests"]
 
     # check if we can run reframe
     @run_after("install")
@@ -111,8 +154,15 @@ class Reframe(Package):
             reframe = Executable(self.prefix + "/bin/reframe")
             reframe("-l")
 
+    @run_after("install")
+    @on_package_attributes(run_tests=True)
+    def check_hpctestlib(self):
+        if self.spec.satisfies("@3.9.0:"):
+            if not can_access("hpctestlib"):
+                tty.warn("the test library was not installed")
+
     def install(self, spec, prefix):
-        if spec.version >= Version("3.0"):
+        if spec.satisfies("@3.0:"):
             if "+docs" in spec:
                 with working_dir("docs"):
                     make("man")
@@ -126,6 +176,6 @@ class Reframe(Package):
 
     def setup_run_environment(self, env):
         env.prepend_path("PYTHONPATH", self.prefix)
-        if self.spec.version >= Version("3.0"):
+        if self.spec.satisfies("@3.0:"):
             if "+docs" in self.spec:
                 env.prepend_path("MANPATH", self.prefix.docs.man)

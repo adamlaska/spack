@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -14,11 +13,13 @@ class Cupla(Package):
     git = "https://github.com/alpaka-group/cupla.git"
     url = "https://github.com/alpaka-group/cupla/archive/refs/tags/0.3.0.tar.gz"
 
-    maintainers = ["vvolkl"]
+    maintainers("vvolkl")
 
     version("develop", branch="dev")
     version("master", branch="master")
     version("0.3.0", sha256="035512517167967697e73544c788453de5e3f0bc4e8d4864b41b2e287365cbaf")
+
+    depends_on("cxx", type="build")  # generated
 
     depends_on("alpaka@0.6.0:0.7")
 

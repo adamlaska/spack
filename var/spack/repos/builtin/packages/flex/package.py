@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -19,6 +18,8 @@ class Flex(AutotoolsPackage):
 
     executables = ["^flex$"]
 
+    license("BSD-2-Clause")
+
     version("2.6.4", sha256="e87aae032bf07c26f85ac0ed3250998c37621d95f8bd748b31f15b33c45ee995")
     version(
         "2.6.3",
@@ -30,6 +31,9 @@ class Flex(AutotoolsPackage):
     version("2.6.1", sha256="3c43f9e658e45e8aae3cf69fa11803d60550865f023852830d557c5f0623c13b")
     version("2.6.0", sha256="cde6e46064a941a3810f7bbc612a2c39cb3aa29ce7eb775089c2515d0adfa7e9")
     version("2.5.39", sha256="258d3c9c38cae05932fb470db58b6a288a361c448399e6bda2694ef72a76e7cd")
+
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
 
     variant("nls", default=False, description="Enable native language support")
     variant("lex", default=True, description="Provide symlinks for lex and libl")
@@ -60,11 +64,10 @@ class Flex(AutotoolsPackage):
 
     def flag_handler(self, name, flags):
         spec = self.spec
-        iflags = []
         if name == "cflags":
             if spec.satisfies("%oneapi"):
-                iflags.append("-Wno-error=implicit-function-declaration")
-        return (iflags, None, None)
+                flags.append("-Wno-error=implicit-function-declaration")
+        return (flags, None, None)
 
     @classmethod
     def determine_version(cls, exe):
@@ -113,20 +116,18 @@ class Flex(AutotoolsPackage):
         args += self.enable_or_disable("nls")
         return args
 
-    @run_after("install")
+    @run_after("install", when="+lex")
     def symlink_lex(self):
         """Install symlinks for lex compatibility."""
-        if self.spec.satisfies("+lex"):
-            dso = dso_suffix
-            for dir, flex, lex in (
-                (self.prefix.bin, "flex", "lex"),
-                (self.prefix.lib, "libfl.a", "libl.a"),
-                (self.prefix.lib, "libfl." + dso, "libl." + dso),
-                (self.prefix.lib64, "libfl.a", "libl.a"),
-                (self.prefix.lib64, "libfl." + dso, "libl." + dso),
-            ):
-
-                if os.path.isdir(dir):
-                    with working_dir(dir):
-                        if os.path.isfile(flex) and not os.path.lexists(lex):
-                            symlink(flex, lex)
+        dso = dso_suffix
+        for dir, flex, lex in (
+            (self.prefix.bin, "flex", "lex"),
+            (self.prefix.lib, "libfl.a", "libl.a"),
+            (self.prefix.lib, "libfl." + dso, "libl." + dso),
+            (self.prefix.lib64, "libfl.a", "libl.a"),
+            (self.prefix.lib64, "libfl." + dso, "libl." + dso),
+        ):
+            if os.path.isdir(dir):
+                with working_dir(dir):
+                    if os.path.isfile(flex) and not os.path.lexists(lex):
+                        symlink(flex, lex)

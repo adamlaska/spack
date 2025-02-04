@@ -2,20 +2,16 @@
 # Archspec Project Developers. See the top-level COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
-"""Types and functions to manage information
-on CPU microarchitectures.
-"""
-# pylint: disable=useless-object-inheritance
+"""Types and functions to manage information on CPU microarchitectures."""
 import functools
 import platform
 import re
 import warnings
 
-import six
-
 import archspec
 import archspec.cpu.alias
 import archspec.cpu.schema
+
 from .alias import FEATURE_ALIASES
 from .schema import LazyDictionary
 
@@ -27,7 +23,7 @@ def coerce_target_names(func):
 
     @functools.wraps(func)
     def _impl(self, other):
-        if isinstance(other, six.string_types):
+        if isinstance(other, str):
             if other not in TARGETS:
                 msg = '"{0}" is not a valid target name'
                 raise ValueError(msg.format(other))
@@ -38,7 +34,7 @@ def coerce_target_names(func):
     return _impl
 
 
-class Microarchitecture(object):
+class Microarchitecture:
     """Represents a specific CPU micro-architecture.
 
     Args:
@@ -50,7 +46,7 @@ class Microarchitecture(object):
             which has "broadwell" as a parent, supports running binaries
             optimized for "broadwell".
         vendor (str): vendor of the micro-architecture
-        features (list of str): supported CPU flags. Note that the semantic
+        features (set of str): supported CPU flags. Note that the semantic
             of the flags in this field might vary among architectures, if
             at all present. For instance x86_64 processors will list all
             the flags supported by a given CPU while Arm processors will
@@ -67,29 +63,41 @@ class Microarchitecture(object):
                 passed in as argument above.
             * versions: versions that support this micro-architecture.
 
-        generation (int): generation of the micro-architecture, if
-            relevant.
+        generation (int): generation of the micro-architecture, if relevant.
+        cpu_part (str): cpu part of the architecture, if relevant.
     """
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-instance-attributes
     #: Aliases for micro-architecture's features
     feature_aliases = FEATURE_ALIASES
 
-    def __init__(self, name, parents, vendor, features, compilers, generation=0):
+    def __init__(self, name, parents, vendor, features, compilers, generation=0, cpu_part=""):
         self.name = name
         self.parents = parents
         self.vendor = vendor
         self.features = features
         self.compilers = compilers
+        # Only relevant for PowerPC
         self.generation = generation
+        # Only relevant for AArch64
+        self.cpu_part = cpu_part
+
+        # Cache the "ancestor" computation
+        self._ancestors = None
+        # Cache the "generic" computation
+        self._generic = None
+        # Cache the "family" computation
+        self._family = None
 
     @property
     def ancestors(self):
         """All the ancestors of this microarchitecture."""
-        value = self.parents[:]
-        for parent in self.parents:
-            value.extend(a for a in parent.ancestors if a not in value)
-        return value
+        if self._ancestors is None:
+            value = self.parents[:]
+            for parent in self.parents:
+                value.extend(a for a in parent.ancestors if a not in value)
+            self._ancestors = value
+        return self._ancestors
 
     def _to_set(self):
         """Returns a set of the nodes in this microarchitecture DAG."""
@@ -109,7 +117,11 @@ class Microarchitecture(object):
             and self.parents == other.parents  # avoid ancestors here
             and self.compilers == other.compilers
             and self.generation == other.generation
+            and self.cpu_part == other.cpu_part
         )
+
+    def __hash__(self):
+        return hash(self.name)
 
     @coerce_target_names
     def __ne__(self, other):
@@ -141,7 +153,8 @@ class Microarchitecture(object):
         cls_name = self.__class__.__name__
         fmt = (
             cls_name + "({0.name!r}, {0.parents!r}, {0.vendor!r}, "
-            "{0.features!r}, {0.compilers!r}, {0.generation!r})"
+            "{0.features!r}, {0.compilers!r}, generation={0.generation!r}, "
+            "cpu_part={0.cpu_part!r})"
         )
         return fmt.format(self)
 
@@ -150,7 +163,7 @@ class Microarchitecture(object):
 
     def __contains__(self, feature):
         # Feature must be of a string type, so be defensive about that
-        if not isinstance(feature, six.string_types):
+        if not isinstance(feature, str):
             msg = "only objects of string types are accepted [got {0}]"
             raise TypeError(msg.format(str(type(feature))))
 
@@ -166,41 +179,53 @@ class Microarchitecture(object):
     @property
     def family(self):
         """Returns the architecture family a given target belongs to"""
-        roots = [x for x in [self] + self.ancestors if not x.ancestors]
-        msg = "a target is expected to belong to just one architecture family"
-        msg += "[found {0}]".format(", ".join(str(x) for x in roots))
-        assert len(roots) == 1, msg
+        if self._family is None:
+            roots = [x for x in [self] + self.ancestors if not x.ancestors]
+            msg = "a target is expected to belong to just one architecture family"
+            msg += f"[found {', '.join(str(x) for x in roots)}]"
+            assert len(roots) == 1, msg
+            self._family = roots.pop()
 
-        return roots.pop()
+        return self._family
 
     @property
     def generic(self):
         """Returns the best generic architecture that is compatible with self"""
-        generics = [x for x in [self] + self.ancestors if x.vendor == "generic"]
-        return max(generics, key=lambda x: len(x.ancestors))
+        if self._generic is None:
+            generics = [x for x in [self] + self.ancestors if x.vendor == "generic"]
+            self._generic = max(generics, key=lambda x: len(x.ancestors))
+        return self._generic
 
-    def to_dict(self, return_list_of_items=False):
-        """Returns a dictionary representation of this object.
+    def to_dict(self):
+        """Returns a dictionary representation of this object."""
+        return {
+            "name": str(self.name),
+            "vendor": str(self.vendor),
+            "features": sorted(str(x) for x in self.features),
+            "generation": self.generation,
+            "parents": [str(x) for x in self.parents],
+            "compilers": self.compilers,
+            "cpupart": self.cpu_part,
+        }
 
-        Args:
-            return_list_of_items (bool): if True returns an ordered list of
-                items instead of the dictionary
-        """
-        list_of_items = [
-            ("name", str(self.name)),
-            ("vendor", str(self.vendor)),
-            ("features", sorted(str(x) for x in self.features)),
-            ("generation", self.generation),
-            ("parents", [str(x) for x in self.parents]),
-        ]
-        if return_list_of_items:
-            return list_of_items
-
-        return dict(list_of_items)
+    @staticmethod
+    def from_dict(data) -> "Microarchitecture":
+        """Construct a microarchitecture from a dictionary representation."""
+        return Microarchitecture(
+            name=data["name"],
+            parents=[TARGETS[x] for x in data["parents"]],
+            vendor=data["vendor"],
+            features=set(data["features"]),
+            compilers=data.get("compilers", {}),
+            generation=data.get("generation", 0),
+            cpu_part=data.get("cpupart", ""),
+        )
 
     def optimization_flags(self, compiler, version):
         """Returns a string containing the optimization flags that needs
         to be used to produce code optimized for this micro-architecture.
+
+        The version is expected to be a string of dot separated digits.
 
         If there is no information on the compiler passed as argument the
         function returns an empty string. If it is known that the compiler
@@ -210,6 +235,11 @@ class Microarchitecture(object):
         Args:
             compiler (str): name of the compiler to be used
             version (str): version of the compiler to be used
+
+        Raises:
+            UnsupportedMicroarchitecture: if the requested compiler does not support
+                this micro-architecture.
+            ValueError: if the version doesn't match the expected format
         """
         # If we don't have information on compiler at all return an empty string
         if compiler not in self.family.compilers:
@@ -225,6 +255,14 @@ class Microarchitecture(object):
             )
             msg = msg.format(compiler, best_target, best_target.family)
             raise UnsupportedMicroarchitecture(msg)
+
+        # Check that the version matches the expected format
+        if not re.match(r"^(?:\d+\.)*\d+$", version):
+            msg = (
+                "invalid format for the compiler version argument. "
+                "Only dot separated digits are allowed."
+            )
+            raise InvalidCompilerVersion(msg)
 
         # If we have information on this compiler we need to check the
         # version being used
@@ -270,16 +308,13 @@ class Microarchitecture(object):
                 flags = flags_fmt.format(**compiler_entry)
                 return flags
 
-        msg = (
-            "cannot produce optimized binary for micro-architecture '{0}'"
-            " with {1}@{2} [supported compiler versions are {3}]"
-        )
-        msg = msg.format(
-            self.name,
-            compiler,
-            version,
-            ", ".join([x["versions"] for x in compiler_info]),
-        )
+        msg = "cannot produce optimized binary for micro-architecture '{0}' with {1}@{2}"
+        if compiler_info:
+            versions = [x["versions"] for x in compiler_info]
+            msg += f' [supported compiler versions are {", ".join(versions)}]'
+        else:
+            msg += " [no supported compiler versions]"
+        msg = msg.format(self.name, compiler, version)
         raise UnsupportedMicroarchitecture(msg)
 
 
@@ -289,9 +324,7 @@ def generic_microarchitecture(name):
     Args:
         name (str): name of the micro-architecture
     """
-    return Microarchitecture(
-        name, parents=[], vendor="generic", features=[], compilers={}
-    )
+    return Microarchitecture(name, parents=[], vendor="generic", features=set(), compilers={})
 
 
 def version_components(version):
@@ -318,9 +351,6 @@ def _known_microarchitectures():
     """Returns a dictionary of the known micro-architectures. If the
     current host platform is unknown adds it too as a generic target.
     """
-    # pylint: disable=fixme
-    # TODO: Simplify this logic using object_pairs_hook to OrderedDict
-    # TODO: when we stop supporting python2.6
 
     def fill_target_from_dict(name, data, targets):
         """Recursively fills targets by adding the micro-architecture
@@ -347,9 +377,10 @@ def _known_microarchitectures():
         features = set(values["features"])
         compilers = values.get("compilers", {})
         generation = values.get("generation", 0)
+        cpu_part = values.get("cpupart", "")
 
         targets[name] = Microarchitecture(
-            name, parents, vendor, features, compilers, generation
+            name, parents, vendor, features, compilers, generation=generation, cpu_part=cpu_part
         )
 
     known_targets = {}
@@ -371,7 +402,15 @@ def _known_microarchitectures():
 TARGETS = LazyDictionary(_known_microarchitectures)
 
 
-class UnsupportedMicroarchitecture(ValueError):
+class ArchspecError(Exception):
+    """Base class for errors within archspec"""
+
+
+class UnsupportedMicroarchitecture(ArchspecError, ValueError):
     """Raised if a compiler version does not support optimization for a given
     micro-architecture.
     """
+
+
+class InvalidCompilerVersion(ArchspecError, ValueError):
+    """Raised when an invalid format is used for compiler versions in archspec."""

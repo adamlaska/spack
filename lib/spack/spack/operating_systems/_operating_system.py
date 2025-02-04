@@ -1,14 +1,11 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import llnl.util.lang
 
-import spack.util.spack_yaml as syaml
-
 
 @llnl.util.lang.lazy_lexicographic_ordering
-class OperatingSystem(object):
+class OperatingSystem:
     """Base class for all the Operating Systems.
 
     On a multiple architecture machine, the architecture spec field can be set to
@@ -43,4 +40,4 @@ class OperatingSystem(object):
         yield self.version
 
     def to_dict(self):
-        return syaml.syaml_dict([("name", self.name), ("version", self.version)])
+        return {"name": self.name, "version": self.version}

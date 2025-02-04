@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -32,9 +31,35 @@ class IntelGtpin(Package):
     """
 
     homepage = "https://www.intel.com/content/www/us/en/developer/articles/tool/gtpin.html"
-    url = "https://downloadmirror.intel.com/730598/external-release-gtpin-3.0-linux.tar.xz"
+    url = "https://downloadmirror.intel.com/762747/external-release-gtpin-3.2.2-linux.tar.xz"
 
-    maintainers = ["rashawnlk"]
+    maintainers("rashawnlk")
+
+    license("MIT")
+
+    version(
+        "4.0",
+        sha256="fc12fb3aefdd4ae75b21ef9325e4058439dace52501200900895240c6ef3f0d8",
+        url="https://downloadmirror.intel.com/816037/external-release-gtpin-4.0-linux.tar.xz",
+    )
+
+    version(
+        "3.7",
+        sha256="366edb46369a67bdbaea3c11ad5bf9a9ead5a7234efb780a27dffd70d1150c39",
+        url="https://downloadmirror.intel.com/793592/external-release-gtpin-3.7-linux.tar.xz",
+    )
+
+    version(
+        "3.4",
+        sha256="c96d08a2729c255e3bc67372fc1271ba60ca8d7bd913f92c2bd951d7d348f553",
+        url="https://downloadmirror.intel.com/777295/external-release-gtpin-3.4-linux.tar.xz",
+    )
+
+    version(
+        "3.2.2",
+        sha256="6c51b08451935ed8c86778d197e2ff36d4b91883f41292968ff413b53ac8910a",
+        url="https://downloadmirror.intel.com/762747/external-release-gtpin-3.2.2-linux.tar.xz",
+    )
 
     version(
         "3.0",
@@ -64,10 +89,13 @@ class IntelGtpin(Package):
         url="https://downloadmirror.intel.com/682779/external-gtpin-2.11.4-linux.tar.bz2",
     )
 
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+
     depends_on("patchelf", type="build")
 
-    # Gtpin only runs on linux/cray x86_64.
-    conflicts("platform=darwin", msg="intel-gtpin only runs on linux/cray")
+    # Gtpin only runs on linux x86_64.
+    conflicts("platform=darwin", msg="intel-gtpin only runs on linux")
     conflicts("target=ppc64:", msg="intel-gtpin only runs on x86_64")
     conflicts("target=ppc64le:", msg="intel-gtpin only runs on x86_64")
     conflicts("target=aarch64:", msg="intel-gtpin only runs on x86_64")

@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -18,9 +17,11 @@ class Baurmc(AutotoolsPackage):
 
     tags = ["hep"]
 
-    maintainers = ["vvolkl"]
+    maintainers("vvolkl")
 
     version("1.0", sha256="de5027ed2e66028bed890760bee9d869e1e330ac7f7112ee5cb25868cea5c35b")
+
+    depends_on("fortran", type="build")  # generated
 
     @property
     def configure_directory(self):

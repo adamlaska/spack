@@ -1,8 +1,8 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
+import spack.build_systems.cmake
 from spack.package import *
 
 
@@ -12,12 +12,29 @@ class NetlibLapack(CMakePackage):
     solutions to linear sets of equations, eigenvector analysis, singular
     value decomposition, etc. It is a very comprehensive and reputable
     package that has found extensive use in the scientific community.
-
     """
 
     homepage = "https://www.netlib.org/lapack/"
     url = "https://www.netlib.org/lapack/lapack-3.5.0.tgz"
+    tags = ["windows"]
 
+    license("BSD-3-Clause-Open-MPI")
+
+    version(
+        "3.12.1",
+        sha256="2ca6407a001a474d4d4d35f3a61550156050c48016d949f0da0529c0aa052422",
+        url="https://github.com/Reference-LAPACK/lapack/archive/refs/tags/v3.12.1.tar.gz",
+    )
+    version(
+        "3.12.0",
+        sha256="eac9570f8e0ad6f30ce4b963f4f033f0f643e7c3912fc9ee6cd99120675ad48b",
+        url="https://github.com/Reference-LAPACK/lapack/archive/refs/tags/v3.12.0.tar.gz",
+    )
+    version(
+        "3.11.0",
+        sha256="4b9ba79bfd4921ca820e83979db76ab3363155709444a787979e81c22285ffa9",
+        url="https://github.com/Reference-LAPACK/lapack/archive/refs/tags/v3.11.0.tar.gz",
+    )
     version(
         "3.10.1",
         sha256="cd005cd021f144d7d5f7f33c943942db9f03a28d110d6a3b80d718a295f7f714",
@@ -55,6 +72,11 @@ class NetlibLapack(CMakePackage):
 
     # netlib-lapack is the reference implementation of LAPACK
     for ver in [
+        "3.12.1",
+        "3.12.0",
+        "3.11.0",
+        "3.10.1",
+        "3.10.0",
         "3.9.1",
         "3.9.0",
         "3.8.0",
@@ -71,8 +93,8 @@ class NetlibLapack(CMakePackage):
         provides("lapack@" + ver, when="@" + ver)
 
     variant("shared", default=True, description="Build shared library version")
+    variant("pic", default=True, description="Produce position-independent code")
     variant("external-blas", default=False, description="Build lapack with an external blas")
-
     variant("lapacke", default=True, description="Activates the build of the LAPACKE C interface")
     variant("xblas", default=False, description="Builds extended precision routines using XBLAS")
 
@@ -98,10 +120,31 @@ class NetlibLapack(CMakePackage):
     # https://github.com/Reference-LAPACK/lapack/pull/268
     patch("testing.patch", when="@3.7.0:3.8")
 
-    # virtual dependency
-    provides("blas", when="~external-blas")
+    # renaming with _64 suffixes pushes code beyond fortran column 72
+    patch(
+        "https://github.com/Reference-LAPACK/lapack/pull/1093.patch?full_index=1",
+        sha256="b1af8b6ef2113a59aba006319ded0c1a282533c3815289e1c9e91185f63ee9fe",
+        when="@3.6:3.12.1",
+    )
+    patch(
+        "https://github.com/Reference-LAPACK/lapack/pull/1094.patch?full_index=1",
+        sha256="e318340ec2e10539b756f50a4816242519d9a14134d3966c669ec64d292758c8",
+        when="@3.12:3.12.1",
+    )
+    patch(
+        "https://github.com/Reference-LAPACK/lapack/pull/1099.patch?full_index=1",
+        sha256="3059ebf898cbca5101db77b77c645ab144a3cecbe58dd2bb46d9b84e7debee92",
+        when="@3.12:3.12.1",
+    )
+
+    # liblapack links to libblas, so if this package is used as a lapack
+    # provider, it must also provide blas.
+    provides("lapack", "blas", when="~external-blas")
     provides("lapack")
 
+    depends_on("c", type="build")
+    depends_on("cxx", type="build", when="@:3.12.0")
+    depends_on("fortran", type="build")
     depends_on("blas", when="+external-blas")
     depends_on("netlib-xblas+fortran+plain_blas", when="+xblas")
     depends_on("python@2.7:", type="test")
@@ -133,22 +176,22 @@ class NetlibLapack(CMakePackage):
         if self.spec.satisfies("platform=windows @0:3.9.1"):
             force_remove("LAPACKE/include/lapacke_mangling.h")
 
+    def xplatform_lib_name(self, lib):
+        return (
+            "lib" + lib
+            if not lib.startswith("lib") and not self.spec.satisfies("platform=windows")
+            else lib
+        )
+
     @property
     def blas_libs(self):
-        shared = True if "+shared" in self.spec else False
+        shared = "+shared" in self.spec
         query_parameters = self.spec.last_query.extra_parameters
         query2libraries = {
-            tuple(): ["libblas"],
-            ("c", "fortran"): [
-                "libcblas",
-                "libblas",
-            ],
-            ("c",): [
-                "libcblas",
-            ],
-            ("fortran",): [
-                "libblas",
-            ],
+            tuple(): [self.xplatform_lib_name("blas")],
+            ("c", "fortran"): [self.xplatform_lib_name("cblas"), self.xplatform_lib_name("blas")],
+            ("c",): [self.xplatform_lib_name("cblas")],
+            ("fortran",): [self.xplatform_lib_name("blas")],
         }
         key = tuple(sorted(query_parameters))
         libraries = query2libraries[key]
@@ -159,17 +202,13 @@ class NetlibLapack(CMakePackage):
         shared = True if "+shared" in self.spec else False
         query_parameters = self.spec.last_query.extra_parameters
         query2libraries = {
-            tuple(): ["liblapack"],
+            tuple(): [self.xplatform_lib_name("lapack")],
             ("c", "fortran"): [
-                "liblapacke",
-                "liblapack",
+                self.xplatform_lib_name("lapacke"),
+                self.xplatform_lib_name("lapack"),
             ],
-            ("c",): [
-                "liblapacke",
-            ],
-            ("fortran",): [
-                "liblapack",
-            ],
+            ("c",): [self.xplatform_lib_name("lapacke")],
+            ("fortran",): [self.xplatform_lib_name("lapack")],
         }
         key = tuple(sorted(query_parameters))
         libraries = query2libraries[key]
@@ -182,82 +221,54 @@ class NetlibLapack(CMakePackage):
         lapacke_h = join_path(include_dir, "lapacke.h")
         return HeaderList([cblas_h, lapacke_h])
 
-    @property
-    def build_directory(self):
-        return join_path(
-            self.stage.source_path,
-            "spack-build-shared" if self._building_shared else "spack-build-static",
-        )
 
+class CMakeBuilder(spack.build_systems.cmake.CMakeBuilder):
     def cmake_args(self):
-        args = ["-DBUILD_SHARED_LIBS:BOOL=" + ("ON" if self._building_shared else "OFF")]
-
-        if self.spec.satisfies("+lapacke"):
-            args.extend(["-DLAPACKE:BOOL=ON", "-DLAPACKE_WITH_TMG:BOOL=ON"])
-        else:
-            args.extend(["-DLAPACKE:BOOL=OFF", "-DLAPACKE_WITH_TMG:BOOL=OFF"])
-
-        if self.spec.satisfies("@3.6.0:"):
-            args.append("-DCBLAS=ON")  # always build CBLAS
+        args = [
+            self.define_from_variant("BUILD_SHARED_LIBS", "shared"),
+            self.define_from_variant("CMAKE_POSITION_INDEPENDENT_CODE", "pic"),
+            self.define_from_variant("LAPACKE", "lapacke"),
+            self.define_from_variant("LAPACKE_WITH_TMG", "lapacke"),
+            self.define("CBLAS", self.spec.satisfies("@3.6.0:")),
+        ]
 
         if self.spec.satisfies("%intel"):
             # Intel compiler finds serious syntax issues when trying to
             # build CBLAS and LapackE
-            args.extend(["-DCBLAS=OFF", "-DLAPACKE:BOOL=OFF"])
+            args.extend([self.define("CBLAS", False), self.define("LAPACKE", False)])
 
         if self.spec.satisfies("%xl") or self.spec.satisfies("%xl_r"):
             # use F77 compiler if IBM XL
             args.extend(
                 [
-                    "-DCMAKE_Fortran_COMPILER=" + self.compiler.f77,
-                    "-DCMAKE_Fortran_FLAGS="
-                    + (" ".join(self.spec.compiler_flags["fflags"]))
-                    + " -O3 -qnohot",
+                    self.define("CMAKE_Fortran_COMPILER", self.pkg.compiler.f77),
+                    self.define(
+                        "CMAKE_Fortran_FLAGS",
+                        " ".join(self.spec.compiler_flags["fflags"]) + " -O3 -qnohot",
+                    ),
                 ]
             )
 
         # deprecated routines are commonly needed by, for example, suitesparse
         # Note that OpenBLAS spack is built with deprecated routines
-        args.append("-DBUILD_DEPRECATED:BOOL=ON")
+        args.append(self.define("BUILD_DEPRECATED", True))
 
         if self.spec.satisfies("+external-blas"):
             args.extend(
                 [
-                    "-DUSE_OPTIMIZED_BLAS:BOOL=ON",
-                    "-DBLAS_LIBRARIES:PATH=" + self.spec["blas"].libs.joined(";"),
+                    self.define("USE_OPTIMIZED_BLAS", True),
+                    self.define("BLAS_LIBRARIES:PATH", self.spec["blas"].libs.joined(";")),
                 ]
             )
 
         if self.spec.satisfies("+xblas"):
             args.extend(
                 [
-                    "-DXBLAS_INCLUDE_DIR=" + self.spec["netlib-xblas"].prefix.include,
-                    "-DXBLAS_LIBRARY=" + self.spec["netlib-xblas"].libs.joined(";"),
+                    self.define("XBLAS_INCLUDE_DIR", self.spec["netlib-xblas"].prefix.include),
+                    self.define("XBLAS_LIBRARY", self.spec["netlib-xblas"].libs.joined(";")),
                 ]
             )
 
-        args.append("-DBUILD_TESTING:BOOL=" + ("ON" if self.run_tests else "OFF"))
+        args.append(self.define("BUILD_TESTING", self.pkg.run_tests))
 
         return args
-
-    # Build, install, and check both static and shared versions of the
-    # libraries when +shared
-    @when("+shared")
-    def cmake(self, spec, prefix):
-        for self._building_shared in (False, True):
-            super(NetlibLapack, self).cmake(spec, prefix)
-
-    @when("+shared")
-    def build(self, spec, prefix):
-        for self._building_shared in (False, True):
-            super(NetlibLapack, self).build(spec, prefix)
-
-    @when("+shared")
-    def install(self, spec, prefix):
-        for self._building_shared in (False, True):
-            super(NetlibLapack, self).install(spec, prefix)
-
-    @when("+shared")
-    def check(self):
-        for self._building_shared in (False, True):
-            super(NetlibLapack, self).check()

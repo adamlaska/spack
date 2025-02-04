@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -12,7 +11,7 @@ class Exaworks(BundlePackage):
     """
 
     homepage = "https://exaworks.org/"
-    maintainers = ["andre-merzky"]
+    maintainers("andre-merzky")
 
     version("0.1.0")
 
@@ -28,3 +27,5 @@ class Exaworks(BundlePackage):
     depends_on("py-radical-saga", type=("build", "run"))
     depends_on("py-radical-pilot", type=("build", "run"))
     depends_on("py-radical-entk", type=("build", "run"))
+
+    depends_on("py-psij-python", type=("build", "run"))

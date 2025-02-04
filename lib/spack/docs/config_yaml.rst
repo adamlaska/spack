@@ -1,5 +1,4 @@
-.. Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-   Spack Project Developers. See the top-level COPYRIGHT file for details.
+.. Copyright Spack Project Developers. See COPYRIGHT file for details.
 
    SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -26,14 +25,23 @@ These settings can be overridden in ``etc/spack/config.yaml`` or
 The location where Spack will install packages and their dependencies.
 Default is ``$spack/opt/spack``.
 
----------------------------------------------------
-``install_hash_length`` and ``install_path_scheme``
----------------------------------------------------
+---------------
+``projections``
+---------------
 
-The default Spack installation path can be very long and can create problems
-for scripts with hardcoded shebangs. Additionally, when using the Intel
-compiler, and if there is also a long list of dependencies, the compiler may
-segfault. If you see the following:
+.. warning::
+
+   Modifying projections of the install tree is strongly discouraged.
+
+By default Spack installs all packages into a unique directory relative to the install
+tree root with the following layout:
+
+.. code-block::
+
+   {architecture}/{compiler.name}-{compiler.version}/{name}-{version}-{hash}
+
+In very rare cases, it may be necessary to reduce the length of this path. For example,
+very old versions of the Intel compiler are known to segfault when input paths are too long:
 
      .. code-block:: console
 
@@ -41,36 +49,25 @@ segfault. If you see the following:
        ** Segmentation violation signal raised. **
        Access violation or stack overflow. Please contact Intel Support for assistance.
 
-it may be because variables containing dependency specs may be too long. There
-are two parameters to help with long path names. Firstly, the
-``install_hash_length`` parameter can set the length of the hash in the
-installation path from 1 to 32. The default path uses the full 32 characters.
+Another case is Python and R packages with many runtime dependencies, which can result
+in very large ``PYTHONPATH`` and ``R_LIBS`` environment variables. This can cause the
+``execve`` system call to fail with ``E2BIG``, preventing processes from starting.
 
-Secondly, it is also possible to modify the entire installation
-scheme. By default Spack uses
-``{architecture}/{compiler.name}-{compiler.version}/{name}-{version}-{hash}``
-where the tokens that are available for use in this directive are the
-same as those understood by the :meth:`~spack.spec.Spec.format`
-method. Using this parameter it is possible to use a different package
-layout or reduce the depth of the installation paths. For example
+For this reason, Spack allows users to modify the installation layout through custom
+projections. For example
 
      .. code-block:: yaml
 
        config:
-         install_path_scheme: '{name}/{version}/{hash:7}'
+         install_tree:
+           root: $spack/opt/spack
+           projections:
+             all: "{name}/{version}/{hash:16}"
 
-would install packages into sub-directories using only the package
-name, version and a hash length of 7 characters.
+would install packages into sub-directories using only the package name, version and a
+hash length of 16 characters.
 
-When using either parameter to set the hash length it only affects the
-representation of the hash in the installation directory. You
-should be aware that the smaller the hash length the more likely
-naming conflicts will occur. These parameters are independent of those
-used to configure module names.
-
-.. warning:: Modifying the installation hash length or path scheme after
-   packages have been installed will prevent Spack from being
-   able to find the old installation directories.
+Notice that reducing the hash length increases the likelihood of hash collisions.
 
 --------------------
 ``build_stage``
@@ -144,6 +141,25 @@ When set to ``true`` (default) Spack will verify certificates of remote
 hosts when making ``ssl`` connections.  Set to ``false`` to disable, and
 tools like ``curl`` will use their ``--insecure`` options.  Disabling
 this can expose you to attacks.  Use at your own risk.
+
+--------------------
+``ssl_certs``
+--------------------
+
+Path to custom certificats for SSL verification. The value can be a 
+filesytem path, or an environment variable that expands to an absolute file path.
+The default value is set to the environment variable ``SSL_CERT_FILE``
+to use the same syntax used by many other applications that automatically
+detect custom certificates.
+When ``url_fetch_method:curl`` the ``config:ssl_certs`` should resolve to
+a single file.  Spack will then set the environment variable ``CURL_CA_BUNDLE``
+in the subprocess calling ``curl``.
+If ``url_fetch_method:urllib`` then files and directories are supported i.e. 
+``config:ssl_certs:$SSL_CERT_FILE`` or ``config:ssl_certs:$SSL_CERT_DIR``
+will work.
+In all cases the expanded path must be absolute for Spack to use the certificates.
+Certificates relative to an environment can be created by prepending the path variable
+with the Spack configuration variable``$env``.
 
 --------------------
 ``checksum``
@@ -222,11 +238,11 @@ and location. (See the *Configuration settings* section of ``man
 ccache`` to learn more about the default settings and how to change
 them). Please note that we currently disable ccache's ``hash_dir``
 feature to avoid an issue with the stage directory (see
-https://github.com/LLNL/spack/pull/3761#issuecomment-294352232).
+https://github.com/spack/spack/pull/3761#issuecomment-294352232).
 
-------------------
-``shared_linking``
-------------------
+-----------------------
+``shared_linking:type``
+-----------------------
 
 Control whether Spack embeds ``RPATH`` or ``RUNPATH`` attributes in ELF binaries
 so that they can find their dependencies. Has no effect on macOS.
@@ -245,15 +261,76 @@ the loading object.
 
 DO NOT MIX the two options within the same install tree.
 
+-----------------------
+``shared_linking:bind``
+-----------------------
+
+This is an *experimental option* that controls whether Spack embeds absolute paths
+to needed shared libraries in ELF executables and shared libraries on Linux. Setting
+this option to ``true`` has two advantages:
+
+1. **Improved startup time**: when running an executable, the dynamic loader does not
+   have to perform a search for needed libraries, they are loaded directly.
+2. **Reliability**: libraries loaded at runtime are those that were linked to. This
+   minimizes the risk of accidentally picking up system libraries.
+
+In the current implementation, Spack sets the soname (shared object name) of
+libraries to their install path upon installation. This has two implications:
+
+1. binding does not apply to libraries installed *before* the option was enabled;
+2. toggling the option off does *not* prevent binding of libraries installed when
+   the option was still enabled.
+
+It is also worth noting that:
+
+1. Applications relying on ``dlopen(3)`` will continue to work, even when they open
+   a library by name. This is because ``RPATH``\s are retained in binaries also
+   when ``bind`` is enabled.
+2. ``LD_PRELOAD`` continues to work for the typical use case of overriding
+   symbols, such as preloading a library with a more efficient ``malloc``.
+   However, the preloaded library will be loaded *additionally to*, instead of
+   *in place of* another library with the same name --- this can be problematic
+   in very rare cases where libraries rely on a particular ``init`` or ``fini``
+   order.
+
+.. note::
+
+   In some cases packages provide *stub libraries* that only contain an interface
+   for linking, but lack an implementation for runtime. An example of this is
+   ``libcuda.so``, provided by the CUDA toolkit; it can be used to link against,
+   but the library needed at runtime is the one installed with the CUDA driver.
+   To avoid binding those libraries, they can be marked as non-bindable using
+   a property in the package:
+
+   .. code-block:: python
+
+      class Example(Package):
+         non_bindable_shared_objects = ["libinterface.so"]
+
 ----------------------
-``terminal_title``
+``install_status``
 ----------------------
 
-By setting this option to ``true``, Spack will update the terminal's title to
-provide information about its current progress as well as the current and
-total package numbers.
+When set to ``true``, Spack will show information about its current progress
+as well as the current and total package numbers. Progress is shown both
+in the terminal title and inline. Setting it to ``false`` will not show any
+progress information.
 
 To work properly, this requires your terminal to reset its title after
 Spack has finished its work, otherwise Spack's status information will
 remain in the terminal's title indefinitely. Most terminals should already
 be set up this way and clear Spack's status information.
+
+-----------
+``aliases``
+-----------
+
+Aliases can be used to define new Spack commands. They can be either shortcuts
+for longer commands or include specific arguments for convenience. For instance,
+if users want to use ``spack install``'s ``-v`` argument all the time, they can
+create a new alias called ``inst`` that will always call ``install -v``:
+
+.. code-block:: yaml
+
+   aliases:
+     inst: install -v

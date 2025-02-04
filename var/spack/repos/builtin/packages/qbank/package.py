@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -25,7 +24,7 @@ class Qbank(Package):
     url = "file://{0}/qbank-2.10.4.tar.gz".format(os.getcwd())
     manual_download = True
 
-    version("2.10.4", "0820587353e63d32ddb49689dd4289e7")
+    version("2.10.4", md5="0820587353e63d32ddb49689dd4289e7")
 
     variant("doc", default=False, description="Build documentation")
 
@@ -33,6 +32,7 @@ class Qbank(Package):
 
     depends_on("perl@5.6:5.16", type=("build", "run"))
     depends_on("perl-dbi@1.00:", type=("build", "run"))
+    depends_on("gmake", type="build")
 
     def configure_args(self):
         config_args = ["--prefix", self.prefix, "--logdir", self.prefix.var.log.qbank]

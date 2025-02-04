@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -17,7 +16,7 @@ class GribApi(CMakePackage):
     url = "https://software.ecmwf.int/wiki/download/attachments/3473437/grib_api-1.17.0-Source.tar.gz?api=v2"
     list_url = "https://software.ecmwf.int/wiki/display/GRIB/Releases"
 
-    maintainers = ["skosukhin"]
+    maintainers("skosukhin")
 
     version(
         "1.24.0",
@@ -55,8 +54,6 @@ class GribApi(CMakePackage):
     )
     variant("pthreads", default=False, description="Enable POSIX threads")
     variant("openmp", default=False, description="Enable OpenMP threads")
-    variant("python", default=False, description="Enable the Python interface")
-    variant("numpy", default=False, description="Enable numpy support in the Python interface")
     variant("fortran", default=False, description="Enable the Fortran support")
     variant(
         "examples", default=True, description="Build the examples (part of the full test suite)"
@@ -78,23 +75,12 @@ class GribApi(CMakePackage):
     depends_on("jasper", when="jp2k=jasper")
     depends_on("libpng", when="+png")
     depends_on("libaec", when="+aec")
-    depends_on("python@2.5:2", when="+python", type=("build", "link", "run"))
-    depends_on("py-numpy", when="+python+numpy", type=("build", "run"))
-    extends("python", when="+python")
 
     conflicts("+openmp", when="+pthreads", msg="Cannot enable both POSIX threads and OMP")
-    conflicts(
-        "+numpy",
-        when="~python",
-        msg="Numpy variant is valid only when the Python interface is " "enabled",
-    )
 
     # The following enforces linking against the specified JPEG2000 backend.
     patch("enable_only_openjpeg.patch", when="jp2k=openjpeg")
     patch("enable_only_jasper.patch", when="jp2k=jasper")
-
-    # Disable NumPy even if it's available.
-    patch("disable_numpy.patch", when="+python~numpy")
 
     # CMAKE_INSTALL_RPATH must be a semicolon-separated list.
     patch("cmake_install_rpath.patch")
@@ -108,7 +94,6 @@ class GribApi(CMakePackage):
         var_opt_list = [
             ("+pthreads", "GRIB_THREADS"),
             ("+openmp", "GRIB_OMP_THREADS"),
-            ("+python", "PYTHON"),
             ("+fortran", "FORTRAN"),
             ("+examples", "EXAMPLES"),
             ("+test", "TESTS"),
@@ -119,7 +104,7 @@ class GribApi(CMakePackage):
             for var, opt in var_opt_list
         ]
 
-        if "+netcdf" in self.spec:
+        if self.spec.satisfies("+netcdf"):
             args.extend(
                 [
                     "-DENABLE_NETCDF=ON",
@@ -142,12 +127,12 @@ class GribApi(CMakePackage):
         if self.spec.variants["jp2k"].value == "openjpeg":
             args.append("-DOPENJPEG_PATH=" + self.spec["openjpeg"].prefix)
 
-        if "+png" in self.spec:
-            args.extend(["-DENABLE_PNG=ON", "-DZLIB_ROOT=" + self.spec["zlib"].prefix])
+        if self.spec.satisfies("+png"):
+            args.extend(["-DENABLE_PNG=ON", "-DZLIB_ROOT=" + self.spec["zlib-api"].prefix])
         else:
             args.append("-DENABLE_PNG=OFF")
 
-        if "+aec" in self.spec:
+        if self.spec.satisfies("+aec"):
             args.extend(
                 [
                     "-DENABLE_AEC=ON",
@@ -158,8 +143,5 @@ class GribApi(CMakePackage):
             )
         else:
             args.append("-DENABLE_AEC=OFF")
-
-        if "^python" in self.spec:
-            args.append("-DPYTHON_EXECUTABLE:FILEPATH=" + python.path)
 
         return args

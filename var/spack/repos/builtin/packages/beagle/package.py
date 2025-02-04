@@ -1,9 +1,8 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import os.path
+import os
 
 from spack.package import *
 
@@ -13,7 +12,7 @@ class Beagle(Package):
     ungenotyped markers."""
 
     homepage = "https://faculty.washington.edu/browning/beagle/beagle.html"
-    maintainers = ["snehring"]
+    maintainers("snehring")
 
     version(
         "5.4",

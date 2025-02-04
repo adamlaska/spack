@@ -1,35 +1,41 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import glob
 import os
-import sys
 
 import py.path
 import pytest
 
+import archspec.cpu
+
 import llnl.util.filesystem as fs
 
 import spack.build_systems.autotools
+import spack.build_systems.cmake
+import spack.builder
+import spack.concretize
 import spack.environment
+import spack.error
+import spack.paths
 import spack.platforms
-import spack.repo
-from spack.build_environment import ChildError, get_std_cmake_args, setup_package
+import spack.platforms.test
+from spack.build_environment import ChildError, MakeExecutable, setup_package
+from spack.installer import PackageInstaller
 from spack.spec import Spec
 from spack.util.executable import which
 
 DATA_PATH = os.path.join(spack.paths.test_path, "data")
 
-pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
-
 
 @pytest.fixture()
-def concretize_and_setup():
+def concretize_and_setup(default_mock_concretization, monkeypatch):
     def _func(spec_str):
-        s = Spec("mpich").concretized()
+        s = default_mock_concretization(spec_str)
         setup_package(s.package, False)
+        monkeypatch.setattr(s.package.module, "make", MakeExecutable("make", jobs=1))
+        monkeypatch.setattr(s.package.module, "ninja", MakeExecutable("ninja", jobs=1))
         return s
 
     return _func
@@ -44,8 +50,9 @@ def test_dir(tmpdir):
     return _func
 
 
+@pytest.mark.not_on_windows("make not available on Windows")
 @pytest.mark.usefixtures("config", "mock_packages", "working_env")
-class TestTargets(object):
+class TestTargets:
     @pytest.mark.parametrize(
         "input_dir", glob.iglob(os.path.join(DATA_PATH, "make", "affirmative", "*"))
     )
@@ -92,10 +99,11 @@ class TestTargets(object):
             s.package._if_ninja_target_execute("check")
 
 
-@pytest.mark.usefixtures("config", "mock_packages")
-class TestAutotoolsPackage(object):
-    def test_with_or_without(self):
-        s = Spec("a").concretized()
+@pytest.mark.not_on_windows("autotools not available on windows")
+@pytest.mark.usefixtures("mock_packages")
+class TestAutotoolsPackage:
+    def test_with_or_without(self, default_mock_concretization):
+        s = default_mock_concretization("pkg-a")
         options = s.package.with_or_without("foo")
 
         # Ensure that values that are not representing a feature
@@ -126,8 +134,8 @@ class TestAutotoolsPackage(object):
         options = s.package.with_or_without("lorem-ipsum", variant="lorem_ipsum")
         assert "--without-lorem-ipsum" in options
 
-    def test_none_is_allowed(self):
-        s = Spec("a foo=none").concretized()
+    def test_none_is_allowed(self, default_mock_concretization):
+        s = default_mock_concretization("pkg-a foo=none")
         options = s.package.with_or_without("foo")
 
         # Ensure that values that are not representing a feature
@@ -139,12 +147,12 @@ class TestAutotoolsPackage(object):
 
     def test_libtool_archive_files_are_deleted_by_default(self, mutable_database):
         # Install a package that creates a mock libtool archive
-        s = Spec("libtool-deletion").concretized()
-        s.package.do_install(explicit=True)
+        s = spack.concretize.concretize_one("libtool-deletion")
+        PackageInstaller([s.package], explicit=True).install()
 
         # Assert the libtool archive is not there and we have
         # a log of removed files
-        assert not os.path.exists(s.package.libtool_archive_file)
+        assert not os.path.exists(spack.builder.create(s.package).libtool_archive_file)
         search_directory = os.path.join(s.prefix, ".spack")
         libtool_deletion_log = fs.find(search_directory, "removed_la_files.txt", recursive=True)
         assert libtool_deletion_log
@@ -154,66 +162,75 @@ class TestAutotoolsPackage(object):
     ):
         # Install a package that creates a mock libtool archive,
         # patch its package to preserve the installation
-        s = Spec("libtool-deletion").concretized()
-        monkeypatch.setattr(s.package, "install_libtool_archives", True)
-        s.package.do_install(explicit=True)
+        s = spack.concretize.concretize_one("libtool-deletion")
+        monkeypatch.setattr(
+            type(spack.builder.create(s.package)), "install_libtool_archives", True
+        )
+        PackageInstaller([s.package], explicit=True).install()
 
         # Assert libtool archives are installed
-        assert os.path.exists(s.package.libtool_archive_file)
+        assert os.path.exists(spack.builder.create(s.package).libtool_archive_file)
 
     def test_autotools_gnuconfig_replacement(self, mutable_database):
         """
         Tests whether only broken config.sub and config.guess are replaced with
         files from working alternatives from the gnuconfig package.
         """
-        s = Spec("autotools-config-replacement +patch_config_files +gnuconfig")
-        s.concretize()
-        s.package.do_install()
+        s = spack.concretize.concretize_one(
+            Spec("autotools-config-replacement +patch_config_files +gnuconfig")
+        )
+        PackageInstaller([s.package]).install()
 
-        with open(os.path.join(s.prefix.broken, "config.sub")) as f:
+        with open(os.path.join(s.prefix.broken, "config.sub"), encoding="utf-8") as f:
             assert "gnuconfig version of config.sub" in f.read()
 
-        with open(os.path.join(s.prefix.broken, "config.guess")) as f:
+        with open(os.path.join(s.prefix.broken, "config.guess"), encoding="utf-8") as f:
             assert "gnuconfig version of config.guess" in f.read()
 
-        with open(os.path.join(s.prefix.working, "config.sub")) as f:
+        with open(os.path.join(s.prefix.working, "config.sub"), encoding="utf-8") as f:
             assert "gnuconfig version of config.sub" not in f.read()
 
-        with open(os.path.join(s.prefix.working, "config.guess")) as f:
+        with open(os.path.join(s.prefix.working, "config.guess"), encoding="utf-8") as f:
             assert "gnuconfig version of config.guess" not in f.read()
 
     def test_autotools_gnuconfig_replacement_disabled(self, mutable_database):
         """
         Tests whether disabling patch_config_files
         """
-        s = Spec("autotools-config-replacement ~patch_config_files +gnuconfig")
-        s.concretize()
-        s.package.do_install()
+        s = spack.concretize.concretize_one(
+            Spec("autotools-config-replacement ~patch_config_files +gnuconfig")
+        )
+        PackageInstaller([s.package]).install()
 
-        with open(os.path.join(s.prefix.broken, "config.sub")) as f:
+        with open(os.path.join(s.prefix.broken, "config.sub"), encoding="utf-8") as f:
             assert "gnuconfig version of config.sub" not in f.read()
 
-        with open(os.path.join(s.prefix.broken, "config.guess")) as f:
+        with open(os.path.join(s.prefix.broken, "config.guess"), encoding="utf-8") as f:
             assert "gnuconfig version of config.guess" not in f.read()
 
-        with open(os.path.join(s.prefix.working, "config.sub")) as f:
+        with open(os.path.join(s.prefix.working, "config.sub"), encoding="utf-8") as f:
             assert "gnuconfig version of config.sub" not in f.read()
 
-        with open(os.path.join(s.prefix.working, "config.guess")) as f:
+        with open(os.path.join(s.prefix.working, "config.guess"), encoding="utf-8") as f:
             assert "gnuconfig version of config.guess" not in f.read()
 
     @pytest.mark.disable_clean_stage_check
-    def test_autotools_gnuconfig_replacement_no_gnuconfig(self, mutable_database):
+    @pytest.mark.skipif(
+        str(archspec.cpu.host().family) != "x86_64", reason="test data is specific for x86_64"
+    )
+    def test_autotools_gnuconfig_replacement_no_gnuconfig(self, mutable_database, monkeypatch):
         """
         Tests whether a useful error message is shown when patch_config_files is
         enabled, but gnuconfig is not listed as a direct build dependency.
         """
-        s = Spec("autotools-config-replacement +patch_config_files ~gnuconfig")
-        s.concretize()
+        monkeypatch.setattr(spack.platforms.test.Test, "default", "x86_64")
+        s = spack.concretize.concretize_one(
+            Spec("autotools-config-replacement +patch_config_files ~gnuconfig")
+        )
 
         msg = "Cannot patch config files: missing dependencies: gnuconfig"
         with pytest.raises(ChildError, match=msg):
-            s.package.do_install()
+            PackageInstaller([s.package]).install()
 
     @pytest.mark.disable_clean_stage_check
     def test_broken_external_gnuconfig(self, mutable_database, tmpdir):
@@ -224,7 +241,7 @@ class TestAutotoolsPackage(object):
         """
         env_dir = str(tmpdir.ensure("env", dir=True))
         gnuconfig_dir = str(tmpdir.ensure("gnuconfig", dir=True))  # empty dir
-        with open(os.path.join(env_dir, "spack.yaml"), "w") as f:
+        with open(os.path.join(env_dir, "spack.yaml"), "w", encoding="utf-8") as f:
             f.write(
                 """\
 spack:
@@ -249,29 +266,32 @@ spack:
 
 
 @pytest.mark.usefixtures("config", "mock_packages")
-class TestCMakePackage(object):
-    def test_cmake_std_args(self):
+class TestCMakePackage:
+    def test_cmake_std_args(self, default_mock_concretization):
         # Call the function on a CMakePackage instance
-        s = Spec("cmake-client").concretized()
-        assert s.package.std_cmake_args == get_std_cmake_args(s.package)
+        s = default_mock_concretization("cmake-client")
+        expected = spack.build_systems.cmake.CMakeBuilder.std_args(s.package)
+        assert spack.builder.create(s.package).std_cmake_args == expected
 
         # Call it on another kind of package
-        s = Spec("mpich").concretized()
-        assert get_std_cmake_args(s.package)
+        s = default_mock_concretization("mpich")
+        assert spack.build_systems.cmake.CMakeBuilder.std_args(s.package)
 
-    def test_cmake_bad_generator(self):
-        s = Spec("cmake-client").concretized()
-        s.package.generator = "Yellow Sticky Notes"
-        with pytest.raises(spack.package_base.InstallError):
-            get_std_cmake_args(s.package)
+    def test_cmake_bad_generator(self, default_mock_concretization):
+        s = default_mock_concretization("cmake-client")
+        with pytest.raises(spack.error.InstallError):
+            spack.build_systems.cmake.CMakeBuilder.std_args(
+                s.package, generator="Yellow Sticky Notes"
+            )
 
-    def test_cmake_secondary_generator(config, mock_packages):
-        s = Spec("cmake-client").concretized()
-        s.package.generator = "CodeBlocks - Unix Makefiles"
-        assert get_std_cmake_args(s.package)
+    def test_cmake_secondary_generator(self, default_mock_concretization):
+        s = default_mock_concretization("cmake-client")
+        assert spack.build_systems.cmake.CMakeBuilder.std_args(
+            s.package, generator="CodeBlocks - Unix Makefiles"
+        )
 
-    def test_define(self):
-        s = Spec("cmake-client").concretized()
+    def test_define(self, default_mock_concretization):
+        s = default_mock_concretization("cmake-client")
 
         define = s.package.define
         for cls in (list, tuple):
@@ -286,7 +306,7 @@ class TestCMakePackage(object):
         assert define("SINGLE", "red") == "-DSINGLE:STRING=red"
 
     def test_define_from_variant(self):
-        s = Spec("cmake-client multi=up,right ~truthy single=red").concretized()
+        s = spack.concretize.concretize_one("cmake-client multi=up,right ~truthy single=red")
 
         arg = s.package.define_from_variant("MULTI")
         assert arg == "-DMULTI:STRING=right;up"
@@ -300,9 +320,19 @@ class TestCMakePackage(object):
         with pytest.raises(KeyError, match="not a variant"):
             s.package.define_from_variant("NONEXISTENT")
 
+    def test_cmake_std_args_cuda(self, default_mock_concretization):
+        s = default_mock_concretization("vtk-m +cuda cuda_arch=70 ^cmake@3.23")
+        option = spack.build_systems.cmake.CMakeBuilder.define_cuda_architectures(s.package)
+        assert "-DCMAKE_CUDA_ARCHITECTURES:STRING=70" == option
+
+    def test_cmake_std_args_hip(self, default_mock_concretization):
+        s = default_mock_concretization("vtk-m +rocm amdgpu_target=gfx900 ^cmake@3.23")
+        option = spack.build_systems.cmake.CMakeBuilder.define_hip_architectures(s.package)
+        assert "-DCMAKE_HIP_ARCHITECTURES:STRING=gfx900" == option
+
 
 @pytest.mark.usefixtures("config", "mock_packages")
-class TestDownloadMixins(object):
+class TestDownloadMixins:
     """Test GnuMirrorPackage, SourceforgePackage, SourcewarePackage and XorgPackage."""
 
     @pytest.mark.parametrize(
@@ -321,8 +351,8 @@ class TestDownloadMixins(object):
             ),
         ],
     )
-    def test_attributes_defined(self, spec_str, expected_url):
-        s = Spec(spec_str).concretized()
+    def test_attributes_defined(self, default_mock_concretization, spec_str, expected_url):
+        s = default_mock_concretization(spec_str)
         assert s.package.urls[0] == expected_url
 
     @pytest.mark.parametrize(
@@ -341,33 +371,35 @@ class TestDownloadMixins(object):
             ("mirror-xorg-broken", r"{0} must define a `xorg_mirror_path` attribute"),
         ],
     )
-    def test_attributes_missing(self, spec_str, error_fmt):
-        s = Spec(spec_str).concretized()
+    def test_attributes_missing(self, default_mock_concretization, spec_str, error_fmt):
+        s = default_mock_concretization(spec_str)
         error_msg = error_fmt.format(type(s.package).__name__)
         with pytest.raises(AttributeError, match=error_msg):
             s.package.urls
 
 
-def test_cmake_define_from_variant_conditional(config, mock_packages):
+def test_cmake_define_from_variant_conditional(default_mock_concretization):
     """Test that define_from_variant returns empty string when a condition on a variant
     is not met. When this is the case, the variant is not set in the spec."""
-    s = Spec("cmake-conditional-variants-test").concretized()
+    s = default_mock_concretization("cmake-conditional-variants-test")
     assert "example" not in s.variants
     assert s.package.define_from_variant("EXAMPLE", "example") == ""
 
 
-def test_autotools_args_from_conditional_variant(config, mock_packages):
+def test_autotools_args_from_conditional_variant(default_mock_concretization):
     """Test that _activate_or_not returns an empty string when a condition on a variant
     is not met. When this is the case, the variant is not set in the spec."""
-    s = Spec("autotools-conditional-variants-test").concretized()
+    s = default_mock_concretization("autotools-conditional-variants-test")
     assert "example" not in s.variants
-    assert len(s.package._activate_or_not("example", "enable", "disable")) == 0
+    assert (
+        len(spack.builder.create(s.package)._activate_or_not("example", "enable", "disable")) == 0
+    )
 
 
-def test_autoreconf_search_path_args_multiple(config, mock_packages, tmpdir):
+def test_autoreconf_search_path_args_multiple(default_mock_concretization, tmpdir):
     """autoreconf should receive the right -I flags with search paths for m4 files
     for build deps."""
-    spec = Spec("dttop").concretized()
+    spec = default_mock_concretization("dttop")
     aclocal_fst = str(tmpdir.mkdir("fst").mkdir("share").mkdir("aclocal"))
     aclocal_snd = str(tmpdir.mkdir("snd").mkdir("share").mkdir("aclocal"))
     build_dep_one, build_dep_two = spec.dependencies(deptype="build")
@@ -381,11 +413,11 @@ def test_autoreconf_search_path_args_multiple(config, mock_packages, tmpdir):
     ]
 
 
-def test_autoreconf_search_path_args_skip_automake(config, mock_packages, tmpdir):
+def test_autoreconf_search_path_args_skip_automake(default_mock_concretization, tmpdir):
     """automake's aclocal dir should not be added as -I flag as it is a default
     3rd party dir search path, and if it's a system version it usually includes
     m4 files shadowing spack deps."""
-    spec = Spec("dttop").concretized()
+    spec = default_mock_concretization("dttop")
     tmpdir.mkdir("fst").mkdir("share").mkdir("aclocal")
     aclocal_snd = str(tmpdir.mkdir("snd").mkdir("share").mkdir("aclocal"))
     build_dep_one, build_dep_two = spec.dependencies(deptype="build")
@@ -395,9 +427,9 @@ def test_autoreconf_search_path_args_skip_automake(config, mock_packages, tmpdir
     assert spack.build_systems.autotools._autoreconf_search_path_args(spec) == ["-I", aclocal_snd]
 
 
-def test_autoreconf_search_path_args_external_order(config, mock_packages, tmpdir):
+def test_autoreconf_search_path_args_external_order(default_mock_concretization, tmpdir):
     """When a build dep is external, its -I flag should occur last"""
-    spec = Spec("dttop").concretized()
+    spec = default_mock_concretization("dttop")
     aclocal_fst = str(tmpdir.mkdir("fst").mkdir("share").mkdir("aclocal"))
     aclocal_snd = str(tmpdir.mkdir("snd").mkdir("share").mkdir("aclocal"))
     build_dep_one, build_dep_two = spec.dependencies(deptype="build")
@@ -411,18 +443,18 @@ def test_autoreconf_search_path_args_external_order(config, mock_packages, tmpdi
     ]
 
 
-def test_autoreconf_search_path_skip_nonexisting(config, mock_packages, tmpdir):
+def test_autoreconf_search_path_skip_nonexisting(default_mock_concretization, tmpdir):
     """Skip -I flags for non-existing directories"""
-    spec = Spec("dttop").concretized()
+    spec = default_mock_concretization("dttop")
     build_dep_one, build_dep_two = spec.dependencies(deptype="build")
     build_dep_one.prefix = str(tmpdir.join("fst"))
     build_dep_two.prefix = str(tmpdir.join("snd"))
     assert spack.build_systems.autotools._autoreconf_search_path_args(spec) == []
 
 
-def test_autoreconf_search_path_dont_repeat(config, mock_packages, tmpdir):
+def test_autoreconf_search_path_dont_repeat(default_mock_concretization, tmpdir):
     """Do not add the same -I flag twice to keep things readable for humans"""
-    spec = Spec("dttop").concretized()
+    spec = default_mock_concretization("dttop")
     aclocal = str(tmpdir.mkdir("prefix").mkdir("share").mkdir("aclocal"))
     build_dep_one, build_dep_two = spec.dependencies(deptype="build")
     build_dep_one.external_path = str(tmpdir.join("prefix"))

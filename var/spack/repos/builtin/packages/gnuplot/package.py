@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -22,12 +21,16 @@ class Gnuplot(AutotoolsPackage):
     """
 
     homepage = "http://www.gnuplot.info"
-    url = "http://downloads.sourceforge.net/project/gnuplot/gnuplot/5.0.6/gnuplot-5.0.6.tar.gz"
+    url = "https://downloads.sourceforge.net/project/gnuplot/gnuplot/5.0.6/gnuplot-5.0.6.tar.gz"
 
     # There is a conflict in term.h between gnuplot and ncurses, which is a
     # dependency of readline. Fix it with a small patch
     patch("term_include.patch")
 
+    license("MIT")
+
+    version("6.0.0", sha256="635a28f0993f6ab0d1179e072ad39b8139d07f51237f841d93c6c2ff4b1758ec")
+    version("5.4.10", sha256="975d8c1cc2c41c7cedc4e323aff035d977feb9a97f0296dd2a8a66d197a5b27c")
     version("5.4.3", sha256="51f89bbab90f96d3543f95235368d188eb1e26eda296912256abcd3535bd4d84")
     version("5.4.2", sha256="e57c75e1318133951d32a83bcdc4aff17fed28722c4e71f2305cfc2ae1cae7ba")
     version("5.2.8", sha256="60a6764ccf404a1668c140f11cc1f699290ab70daa1151bb58fed6139a28ac37")
@@ -40,6 +43,9 @@ class Gnuplot(AutotoolsPackage):
     version("5.0.5", sha256="25f3e0bf192e01115c580f278c3725d7a569eb848786e12b455a3fda70312053")
     version("5.0.1", sha256="7cbc557e71df581ea520123fb439dea5f073adcc9010a2885dc80d4ed28b3c47")
 
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+
     variant("wx", default=False, description="Activates wxWidgets terminal")
     variant("gd", default=True, description="Activates gd based terminal")
     variant("cairo", default=True, description="Activates cairo based terminal")
@@ -51,9 +57,10 @@ class Gnuplot(AutotoolsPackage):
         description="Enable PBM (Portable Bit Map) and other older bitmap terminals",
     )
     variant("qt", default=False, description="Build with QT")
+    variant("readline", default=True, description="Build with readline")
 
     # required dependencies
-    depends_on("readline")
+    depends_on("readline", when="+readline")
     depends_on("pkgconfig", type="build")
     depends_on("libxpm")
     depends_on("iconv")
@@ -79,15 +86,16 @@ class Gnuplot(AutotoolsPackage):
             "--disable-silent-rules",
             # Per upstream: "--with-tutorial is horribly out of date."
             "--without-tutorial",
-            "--with-readline=%s" % spec["readline"].prefix,
         ]
 
-        if "+pbm" in spec:
+        options += self.with_or_without("readline", "prefix")
+
+        if spec.satisfies("+pbm"):
             options.append("--with-bitmap-terminals")
         else:
             options.append("--without-bitmap-terminals")
 
-        if "+X" in spec:
+        if spec.satisfies("+X"):
             # It seems there's an open bug for wxWidgets support
             # See : http://sourceforge.net/p/gnuplot/bugs/1694/
             os.environ["TERMLIBS"] = "-lX11"
@@ -95,7 +103,7 @@ class Gnuplot(AutotoolsPackage):
         else:
             options.append("--without-x")
 
-        if "+qt" in spec:
+        if spec.satisfies("+qt"):
             options.append("--with-qt=qt5")
             # QT needs C++11 compiler:
             os.environ["CXXFLAGS"] = "{0}".format(self.compiler.cxx11_flag)
@@ -125,22 +133,22 @@ class Gnuplot(AutotoolsPackage):
         else:
             options.append("--with-qt=no")
 
-        if "+wx" in spec:
+        if spec.satisfies("+wx"):
             options.append("--with-wx=%s" % spec["wxwidgets"].prefix)
         else:
             options.append("--disable-wxwidgets")
 
-        if "+gd" in spec:
+        if spec.satisfies("+gd"):
             options.append("--with-gd=%s" % spec["libgd"].prefix)
         else:
             options.append("--without-gd")
 
-        if "+cairo" in spec:
+        if spec.satisfies("+cairo"):
             options.append("--with-cairo")
         else:
             options.append("--without-cairo")
 
-        if "+libcerf" in spec:
+        if spec.satisfies("+libcerf"):
             options.append("--with-libcerf")
         else:
             options.append("--without-libcerf")
@@ -158,5 +166,7 @@ class Gnuplot(AutotoolsPackage):
         # TODO: --with-aquaterm  depends_on('aquaterm')
         options.append("--without-aquaterm")
 
-        os.environ["LDFLAGS"] = "-Wl,--copy-dt-needed-entries"
+        if spec.satisfies("%gcc@8:"):
+            os.environ["LDFLAGS"] = "-Wl,--copy-dt-needed-entries"
+
         return options

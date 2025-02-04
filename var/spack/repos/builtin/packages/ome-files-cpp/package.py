@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -17,10 +16,14 @@ class OmeFilesCpp(CMakePackage):
     url = "https://gitlab.com/codelibre/ome/ome-files-cpp/-/archive/v0.6.0/ome-files-cpp-v0.6.0.tar.gz"
     git = "https://gitlab.com/codelibre/ome/ome-files-cpp.git"
 
-    maintainers = ["omsai"]
+    maintainers("omsai")
+
+    license("BSD-2-Clause")
 
     version("master", branch="master")
     version("0.6.0", sha256="e0baf3eeb2ea639f426292a36b58adcaa42ce61a4a0f15f34690602f3f5d47c1")
+
+    depends_on("cxx", type="build")  # generated
 
     depends_on("boost@1.53: +filesystem +program_options")
     depends_on("ome-model")
@@ -28,7 +31,4 @@ class OmeFilesCpp(CMakePackage):
     depends_on("googletest", type="test")
 
     def cmake_args(self):
-        return [
-            "-DCMAKE_CXX_STANDARD=17",
-            "-DCMAKE_CXX_STANDARD_REQUIRED=ON",
-        ]
+        return ["-DCMAKE_CXX_STANDARD=17", "-DCMAKE_CXX_STANDARD_REQUIRED=ON"]

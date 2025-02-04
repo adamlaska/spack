@@ -1,5 +1,4 @@
-# Copyright 2013-2021 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -11,7 +10,7 @@ class RktCextLib(RacketPackage):
 
     git = "ssh://git@github.com/racket/cext-lib.git"
 
-    maintainers = ["elfprince13"]
+    maintainers("elfprince13")
 
     version("8.3", commit="cc22e2456df881a9008240d70dd9012ef37395f5")  # tag = 'v8.3'
 
@@ -21,5 +20,4 @@ class RktCextLib(RacketPackage):
     depends_on("rkt-scheme-lib@8.3", type=("build", "run"), when="@8.3")
 
     racket_name = "cext-lib"
-    pkgs = True
     subdirectory = racket_name

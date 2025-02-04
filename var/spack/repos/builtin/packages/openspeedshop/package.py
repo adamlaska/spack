@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -26,10 +25,18 @@ class Openspeedshop(CMakePackage):
     homepage = "http://www.openspeedshop.org"
     git = "https://github.com/OpenSpeedShop/openspeedshop.git"
 
+    maintainers("jgalarowicz")
+
+    license("GPL-2.0-only")
+
     version("develop", branch="master")
     version("2.4.2.1", branch="2.4.2.1")
     version("2.4.2", branch="2.4.2")
     version("2.4.1", branch="2.4.1")
+
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+    depends_on("fortran", type="build")  # generated
 
     variant(
         "runtime", default=False, description="build only the runtime libraries and collectors."
@@ -37,8 +44,7 @@ class Openspeedshop(CMakePackage):
     variant(
         "crayfe",
         default=False,
-        description="build only the FE tool using the runtime_dir \
-                         to point to target build.",
+        description="build only the FE tool using the runtime_dir to point to target build.",
     )
     variant("cuda", default=False, description="build with cuda packages included.")
 
@@ -60,38 +66,34 @@ class Openspeedshop(CMakePackage):
     variant(
         "openmpi",
         default=False,
-        description="Build mpi collector for openmpi \
-                         MPI when variant is enabled.",
+        description="Build mpi collector for openmpi MPI when variant is enabled.",
     )
     variant(
         "mpt",
         default=False,
-        description="Build mpi collector for SGI \
-                         MPT MPI when variant is enabled.",
+        description="Build mpi collector for SGI MPT MPI when variant is enabled.",
     )
     variant(
         "mvapich2",
         default=False,
-        description="Build mpi collector for mvapich2\
-                         MPI when variant is enabled.",
+        description="Build mpi collector for mvapich2 MPI when variant is enabled.",
     )
     variant(
         "mpich2",
         default=False,
-        description="Build mpi collector for mpich2\
-                         MPI when variant is enabled.",
+        description="Build mpi collector for mpich2 MPI when variant is enabled.",
     )
 
     depends_on("cmake@3.0.2:", type="build")
 
     # Dependencies for openspeedshop that are common to all
     # the variants of the OpenSpeedShop build
-    depends_on("libtool", type="build")
+    depends_on("libtool", type="link")  # links against libltdl
     depends_on("bison", type="build")
     depends_on("flex@2.6.1", type="build")
 
     # For binutils
-    depends_on("binutils+plugins~gold@2.32")
+    depends_on("binutils@2.32")
 
     depends_on("elfutils", type="link")
     depends_on("libdwarf")
@@ -105,10 +107,9 @@ class Openspeedshop(CMakePackage):
     # See https://github.com/spack/spack/pull/22303 for reference
     depends_on(Boost.with_default_variants)
 
-    depends_on("dyninst@master", when="@develop")
     depends_on("dyninst@10:", when="@2.4.0:9999")
 
-    depends_on("python@2.7.14:2.7", type=("build", "run"))
+    depends_on("python", type=("build", "run"))
 
     depends_on("libxml2")
 
@@ -186,7 +187,6 @@ class Openspeedshop(CMakePackage):
         cmake_options.extend(cray_login_node_options)
 
     def cmake_args(self):
-
         spec = self.spec
 
         compile_flags = "-O2 -g -Wall"
@@ -214,7 +214,6 @@ class Openspeedshop(CMakePackage):
                 cmake_args.extend(["-DCBTF_ARGONAVIS_DIR=%s" % spec["cbtf-argonavis"].prefix])
 
         else:
-
             # Appends base options to cmake_args
             self.set_defaultbase_cmake_options(spec, cmake_args)
             guitype = self.spec.variants["gui"].value
@@ -253,27 +252,19 @@ class Openspeedshop(CMakePackage):
         # Appends to cmake_options the options that will enable
         # the appropriate base level options to the openspeedshop
         # cmake build.
-        python_exe = spec["python"].command.path
-        python_library = spec["python"].libs[0]
-        python_include = spec["python"].headers.directories[0]
-        true_value = "TRUE"
-
-        base_options = []
-
-        base_options.append("-DBINUTILS_DIR=%s" % spec["binutils"].prefix)
-        base_options.append("-DLIBELF_DIR=%s" % spec["elfutils"].prefix)
-        base_options.append("-DLIBDWARF_DIR=%s" % spec["libdwarf"].prefix)
-        base_options.append("-DPYTHON_EXECUTABLE=%s" % python_exe)
-        base_options.append("-DPYTHON_INCLUDE_DIR=%s" % python_include)
-        base_options.append("-DPYTHON_LIBRARY=%s" % python_library)
-        base_options.append("-DBoost_NO_SYSTEM_PATHS=%s" % true_value)
-        base_options.append("-DBoost_NO_BOOST_CMAKE=%s" % true_value)
-        base_options.append("-DBOOST_ROOT=%s" % spec["boost"].prefix)
-        base_options.append("-DBoost_DIR=%s" % spec["boost"].prefix)
-        base_options.append("-DBOOST_LIBRARYDIR=%s" % spec["boost"].prefix.lib)
-        base_options.append("-DDYNINST_DIR=%s" % spec["dyninst"].prefix)
-
-        cmake_options.extend(base_options)
+        cmake_options.extend(
+            [
+                self.define("BINUTILS_DIR", spec["binutils"].prefix),
+                self.define("LIBELF_DIR", spec["elfutils"].prefix),
+                self.define("LIBDWARF_DIR", spec["libdwarf"].prefix),
+                self.define("Boost_NO_SYSTEM_PATHS", True),
+                self.define("Boost_NO_BOOST_CMAKE", True),
+                self.define("BOOST_ROOT", spec["boost"].prefix),
+                self.define("Boost_DIR", spec["boost"].prefix),
+                self.define("BOOST_LIBRARYDIR", spec["boost"].prefix.lib),
+                self.define("DYNINST_DIR", spec["dyninst"].prefix),
+            ]
+        )
 
     def set_mpi_cmake_options(self, spec, cmake_options):
         # Appends to cmake_options the options that will enable

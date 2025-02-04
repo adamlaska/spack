@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -12,10 +11,14 @@ class Wcs(CMakePackage):
 
     homepage = "https://github.com/LLNL/wcs.git"
     git = "https://github.com/LLNL/wcs.git"
-    maintainers = ["rblake-llnl"]
+    maintainers("rblake-llnl")
+
+    license("MIT")
 
     version("master", branch="master")
     version("develop", branch="devel")
+
+    depends_on("cxx", type="build")  # generated
 
     depends_on("boost+graph+filesystem+regex+system")
 

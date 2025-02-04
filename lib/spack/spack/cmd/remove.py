@@ -1,12 +1,11 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import llnl.util.tty as tty
 
 import spack.cmd
-import spack.cmd.common.arguments as arguments
+from spack.cmd.common import arguments
 
 description = "remove specs from an environment"
 section = "environments"
@@ -38,6 +37,6 @@ def remove(parser, args):
             env.clear()
         else:
             for spec in spack.cmd.parse_specs(args.specs):
-                tty.msg("Removing %s from environment %s" % (spec, env.name))
                 env.remove(spec, args.list_name, force=args.force)
+                tty.msg(f"{spec} has been removed from {env.manifest}")
         env.write()

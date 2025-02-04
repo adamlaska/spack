@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -15,7 +14,9 @@ class Symengine(CMakePackage):
     homepage = "https://symengine.org"
     url = "https://github.com/symengine/symengine/archive/v0.2.0.tar.gz"
     git = "https://github.com/symengine/symengine.git"
-    maintainers = ["HaoZeke", "jppelteret"]
+    maintainers("HaoZeke", "jppelteret")
+
+    license("MIT")
 
     version("master", branch="master")
     version("0.9.0", sha256="dcf174ac708ed2acea46691f6e78b9eb946d8a2ba62f75e87cf3bf4f0d651724")
@@ -27,6 +28,9 @@ class Symengine(CMakePackage):
     version("0.3.0", sha256="591463cb9e741d59f6dfd39a7943e3865d3afe9eac47d1a9cbf5ca74b9c49476")
     version("0.2.0", sha256="64d050b0b9decd12bf4ea3b7d18d3904dd7cb8baaae9fbac1b8068e3c59709be")
     version("0.1.0", sha256="daba3ba0ae91983a772f66bf755b1953c354fe6dc353588b23705d9a79b011fc")
+
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
 
     variant(
         "boostmp", default=False, description="Compile with Boost multi-precision integer library"

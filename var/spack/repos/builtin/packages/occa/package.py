@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -19,7 +18,9 @@ class Occa(Package):
     homepage = "https://libocca.org"
     git = "https://github.com/libocca/occa.git"
 
-    maintainers = ["v-dobrev", "dmed256"]
+    maintainers("v-dobrev", "dmed256")
+
+    license("MIT")
 
     version("develop")
     version("1.2.0", tag="v1.2.0", commit="18379073b6497f677a20bfeced95b511f82c3355")
@@ -32,11 +33,16 @@ class Occa(Package):
     version("0.2.0", tag="v0.2.0", commit="2eceaa5706ad6cf3a1b153c1f2a8a2fffa2d5945")
     version("0.1.0", tag="v0.1.0", commit="381e886886dc87823769c5f20d0ecb29dd117afa")
 
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+    depends_on("fortran", type="build")  # generated
+
     variant("cuda", default=True, description="Activates support for CUDA")
     variant("openmp", default=True, description="Activates support for OpenMP")
     variant("opencl", default=True, description="Activates support for OpenCL")
 
     depends_on("cuda", when="+cuda")
+    depends_on("gmake", type="build")
 
     conflicts("%gcc@6:", when="^cuda@:8")
     conflicts("%gcc@7:", when="^cuda@:9")
@@ -99,6 +105,9 @@ class Occa(Package):
 
         if "~opencl" in spec:
             env.set("OCCA_OPENCL_ENABLED", "0")
+
+        if "~openmp" in spec:
+            env.set("OCCA_OPENMP_ENABLED", "0")
 
         # Setup run-time environment for testing.
         env.set("OCCA_VERBOSE", "1")

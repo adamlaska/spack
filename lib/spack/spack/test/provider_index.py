@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -18,7 +17,7 @@ Tests assume that mock packages provide this::
                     mpi@:10.0: set([zmpi])},
     'stuff': {stuff: set([externalvirtual])}}
 """
-from six import StringIO
+import io
 
 import spack.repo
 from spack.provider_index import ProviderIndex
@@ -26,19 +25,19 @@ from spack.spec import Spec
 
 
 def test_provider_index_round_trip(mock_packages):
-    p = ProviderIndex(spack.repo.all_package_names())
+    p = ProviderIndex(specs=spack.repo.all_package_names(), repository=spack.repo.PATH)
 
-    ostream = StringIO()
+    ostream = io.StringIO()
     p.to_json(ostream)
 
-    istream = StringIO(ostream.getvalue())
-    q = ProviderIndex.from_json(istream)
+    istream = io.StringIO(ostream.getvalue())
+    q = ProviderIndex.from_json(istream, repository=spack.repo.PATH)
 
     assert p == q
 
 
 def test_providers_for_simple(mock_packages):
-    p = ProviderIndex(spack.repo.all_package_names())
+    p = ProviderIndex(specs=spack.repo.all_package_names(), repository=spack.repo.PATH)
 
     blas_providers = p.providers_for("blas")
     assert Spec("netlib-blas") in blas_providers
@@ -51,7 +50,7 @@ def test_providers_for_simple(mock_packages):
 
 
 def test_mpi_providers(mock_packages):
-    p = ProviderIndex(spack.repo.all_package_names())
+    p = ProviderIndex(specs=spack.repo.all_package_names(), repository=spack.repo.PATH)
 
     mpi_2_providers = p.providers_for("mpi@2")
     assert Spec("mpich2") in mpi_2_providers
@@ -64,12 +63,12 @@ def test_mpi_providers(mock_packages):
 
 
 def test_equal(mock_packages):
-    p = ProviderIndex(spack.repo.all_package_names())
-    q = ProviderIndex(spack.repo.all_package_names())
+    p = ProviderIndex(specs=spack.repo.all_package_names(), repository=spack.repo.PATH)
+    q = ProviderIndex(specs=spack.repo.all_package_names(), repository=spack.repo.PATH)
     assert p == q
 
 
 def test_copy(mock_packages):
-    p = ProviderIndex(spack.repo.all_package_names())
+    p = ProviderIndex(specs=spack.repo.all_package_names(), repository=spack.repo.PATH)
     q = p.copy()
     assert p == q

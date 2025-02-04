@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -15,7 +14,7 @@ class Mono(AutotoolsPackage):
 
     homepage = "https://www.mono-project.com/"
     url = "https://download.mono-project.com/sources/mono/mono-5.0.1.1.tar.bz2"
-    maintainers = ["grospelliergilles"]
+    maintainers("grospelliergilles")
 
     # /usr/share/.mono/keypairs needs to exist or be able to be
     # created, e.g. https://github.com/gentoo/dotnet/issues/6
@@ -30,6 +29,8 @@ class Mono(AutotoolsPackage):
     depends_on("iconv")
     depends_on("perl", type=("build"))
     depends_on("python", type=("build"))
+
+    license("MIT")
 
     version(
         "6.12.0.122",
@@ -64,6 +65,10 @@ class Mono(AutotoolsPackage):
     version("5.0.1.1", sha256="48d6ae71d593cd01bf0f499de569359d45856cda325575e1bacb5fabaa7e9718")
     version("4.8.0.524", sha256="ca02614cfc9fe65e310631cd611d7b07d1ff205ce193006d4be0f9919c26bdcf")
 
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+    depends_on("fortran", type="build")  # generated
+
     def patch(self):
         if "+patch-folder-path" in self.spec:
             before = 'return "/usr/share";'
@@ -74,6 +79,8 @@ class Mono(AutotoolsPackage):
 
     def configure_args(self):
         args = []
-        li = self.spec["iconv"].prefix
-        args.append("--with-libiconv-prefix={p}".format(p=li))
+        if self.spec["iconv"].name == "libiconv":
+            args.append(f"--with-libiconv-prefix={self.spec['iconv'].prefix}")
+        else:
+            args.append("--without-libiconv-prefix")
         return args

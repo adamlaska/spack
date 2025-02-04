@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -15,12 +14,26 @@ class Ccache(CMakePackage):
 
     homepage = "https://ccache.dev/"
     url = "https://github.com/ccache/ccache/releases/download/v4.2.1/ccache-4.2.1.tar.gz"
-    maintainers = ["haampie"]
+    maintainers("haampie")
 
     tags = ["build-tools"]
 
     executables = ["^ccache$"]
 
+    license("GPL-3.0-or-later")
+
+    version("4.10.2", sha256="108100960bb7e64573ea925af2ee7611701241abb36ce0aae3354528403a7d87")
+    version("4.9.1", sha256="12834ecaaaf2db069dda1d1d991f91c19e3274cc04a471af5b64195def17e90f")
+    version("4.8.3", sha256="d59dd569ad2bbc826c0bc335c8ebd73e78ed0f2f40ba6b30069347e63585d9ef")
+    version("4.8.2", sha256="75eef15b8b9da48db9c91e1d0ff58b3645fc70c0e4ca2ef1b6825a12f21f217d")
+    version("4.8.1", sha256="869903c1891beb8bee87f1ec94d8a0dad18c2add4072c456acbc85cdfc23ca63")
+    version("4.8", sha256="ac4b01748fd59cfe07e070c34432b91bdd0fd8640e1e653a80b01d6a523186b0")
+    version("4.7.4", sha256="dc283906b73bd7c461178ca472a459e9d86b5523405035921bd8204e77620264")
+    version("4.7.3", sha256="577841df9e9d9659d58a2f4e0f6eaceb7e29816988ffb2b12390e17b109b4ac4")
+    version("4.7.2", sha256="6b346f441342a25a6c1d7e010957a593f416e94b5d66fdf2e2992953b3860b9d")
+    version("4.7.1", sha256="fa00c8446d910acebd10dc43e7b77e3b78e774ac3f621618e8d055dcc631e914")
+    version("4.6.3", sha256="f46ba3706ad80c30d4d5874dee2bf9227a7fcd0ccaac31b51919a3053d84bd05")
+    version("4.6.2", sha256="6a746a9bed01585388b68e2d58af2e77741fc8d66bc360b5a0b4c41fc284dafe")
     version("4.6.1", sha256="59b28a57c3a45e48d6049001999c9f94cd4d3e9b0196994bed9a6a7437ffa3bc")
     version("4.6", sha256="73a1767ac6b7c0404a1a55f761a746d338e702883c7137fbf587023062258625")
     version("4.5.1", sha256="f0d3cff5d555d6868f14a7d05696f0370074e475304fd5aa152b98f892364981")
@@ -43,6 +56,9 @@ class Ccache(CMakePackage):
     version("3.3", sha256="b220fce435fe3d86b8b90097e986a17f6c1f971e0841283dd816adb238c5fd6a")
     version("3.2.9", sha256="1e13961b83a3d215c4013469c149414a79312a22d3c7bf9f946abac9ee33e63f")
 
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+
     variant("redis", default=True, description="Enable Redis secondary storage")
 
     depends_on("cmake@3.15:", when="@4.7:", type="build")
@@ -51,18 +67,24 @@ class Ccache(CMakePackage):
 
     depends_on("gperf", when="@:3")
     depends_on("libxslt", when="@:3")
-    depends_on("zlib", when="@:3")
+    depends_on("zlib-api", when="@:3")
 
     depends_on("zstd", when="@4.0:")
 
     depends_on("hiredis@0.13.3:", when="@4.4: +redis")
     depends_on("pkgconfig", type="build", when="@4.4:")
 
+    conflicts("%gcc@:7", when="@4.7.1:")
     conflicts("%gcc@:5", when="@4.4:")
+    conflicts("%clang@:7", when="@4.7:")
     conflicts("%clang@:4", when="@4.4:")
+
+    patch("fix-gcc-12.patch", when="@4.8:4.8.2 %gcc@12")
 
     def cmake_args(self):
         return [
+            # The test suite does not support the compiler being a wrapper script
+            # https://github.com/ccache/ccache/issues/914#issuecomment-922521690
             self.define("ENABLE_TESTING", False),
             self.define("ENABLE_DOCUMENTATION", False),
             self.define_from_variant("REDIS_STORAGE_BACKEND", "redis"),

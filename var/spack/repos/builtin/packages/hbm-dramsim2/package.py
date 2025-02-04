@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -15,9 +14,11 @@ class HbmDramsim2(MakefilePackage):
     git = "https://github.com/tactcomplabs/HBM"
     url = "https://github.com/tactcomplabs/HBM/archive/hbm-1.0.0-release.tar.gz"
 
-    maintainers = ["jjwilke"]
+    maintainers("jjwilke")
 
     version("1.0.0", sha256="0efad11c58197edb47ad1359f8f93fb45d882c6bebcf9f2143e0df7a719689a0")
+
+    depends_on("cxx", type="build")  # generated
 
     def install(self, spec, prefix):
         install_tree(".", prefix)

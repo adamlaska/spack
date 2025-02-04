@@ -1,9 +1,6 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
-
-import os
 
 from spack.package import *
 
@@ -11,79 +8,73 @@ from spack.package import *
 class Totalview(Package):
     """Totalview parallel debugger.
 
-    Source must be made available to Spack
-    externally, either by having the tarballs in the current working directory
-    or having the tarballs in a Spack mirror.
+    Select the version associated with your machine architecture'
+    '."""
 
-    The documentation tarball will
-    be used as the primary source and the architecture appropriate tarball will
-    be downloaded as a resource."""
-
-    homepage = "https://www.roguewave.com/products-services/totalview"
-    maintainers = ["dshrader"]
-    manual_download = True
+    homepage = "https://totalview.io"
+    maintainers("dshrader", "petertea", "suzannepaterno", "elliebinkley")
     license_required = True
     license_comment = "#"
-    license_files = ["licenses/license.dat"]
-    license_vars = ["TV_LICENSE_FILE"]
+    license_files = ["tv_license/license.lic"]
+    license_vars = ["RLM_LICENSE"]
 
     # As the install of Totalview is via multiple tarballs, the base install
     # will be the documentation.  The architecture-specific tarballs are added
     # as resources dependent on the specific architecture used.
-    version("2021.1.16", sha256="4c51c7b6ab6b6afa7635ba2e9fc3b0ef833806f775a0ad0da26b13d6320625dd")
-    version("2019.2.18", sha256="09e5c554032af945f8cf147dd548421267e50e906cc9686fb5cd0e8e63fcf650")
 
-    # Distributed with Totalview
-    variant("memoryscape", default=True, description="Install memoryscape")
-
-    # Because the actual source tarball is architecture dependent, the main
-    # download is the documentation tarball and the source is downloaded as a
-    # resource once the target architecture is known.
-    resource(
-        name="x86_64",
-        url="totalview_{0}_linux_x86-64.tar".format(version),
-        destination=".",
-        sha256="3b0ab078deff3654ddc912a004d256f1376978aa1c4dd5a8a41fa9fbb474d07c",
-        when="@2019.2.18 target=x86_64:",
-    )
-    resource(
-        name="aarch64",
-        url="totalview_{0}_linux_arm64.tar".format(version),
-        destination=".",
-        sha256="3bbda1aa7c06ce82874c1517bf949c9f6cbd0f4c9ebe283d21f0643f6e724b6b",
-        when="@2019.2.18 target=aarch64:",
-    )
-    resource(
-        name="ppcle",
-        url="totalview_{0}_linux_powerle.tar".format(version),
-        destination=".",
-        sha256="c0e4dbf145312fc7143ad0b7e9474e653933581990e0b9d07237c73dbdff8365",
-        when="@2019.2.18 target=ppc64le:",
-    )
-    resource(
-        name="x86_64",
-        url="totalview_{0}_linux_x86-64.tar".format(version),
-        destination=".",
-        sha256="129e991d3ce4df9f9f04adbf79b62d3c2706d7732ec305f3d3c97a6b4d1f5a13",
-        when="@2021.1.16 target=x86_64:",
-    )
-    resource(
-        name="aarch64",
-        url="totalview_{0}_linux_arm64.tar".format(version),
-        destination=".",
-        sha256="d559c0e090b2a6b935986324a2f1b20c02c5a2991432b8305952c120db41cdb5",
-        when="@2021.1.16 target=aarch64:",
-    )
-    resource(
-        name="ppcle",
-        url="totalview_{0}_linux_powerle.tar".format(version),
-        destination=".",
-        sha256="88c6bf82bd0807f826e2920967b288ac40e9bc56554e55966dfea793bc9c2b0a",
-        when="@2021.1.16 target=ppcle:",
+    version(
+        "2024.3-x86-64",
+        sha256="fb47c5a5abc6ad0e3e7cff1a346037387fa471c3a5cb46b6cdbe7f8a10aff2a7",
+        url="https://dslwuu69twiif.cloudfront.net/totalview/2024.3/totalview_2024.3.10_linux_x86-64.tar",
     )
 
-    def url_for_version(self, version):
-        return "file://{0}/totalview.{1}-doc.tar".format(os.getcwd(), version)
+    version(
+        "2024.3-powerle",
+        sha256="a064d3c9b12108ec228e2ff203549442172e282682786ff20d02ea9bf40109b2",
+        url="https://dslwuu69twiif.cloudfront.net/totalview/2024.3/totalview_2024.3.10_linux_powerle.tar",
+    )
+
+    version(
+        "2024.3-linux-arm64",
+        sha256="91701e3460cad8bba8810c5ece4720f0156ccba7526d407801a7d0b0e09fb054",
+        url="https://dslwuu69twiif.cloudfront.net/totalview/2024.3/totalview_2024.3.10_linux_arm64.tar",
+    )
+
+    version(
+        "2024.2-x86-64",
+        sha256="b6d9cfd804ff1f6641fbd92f9730b34f62062ead9b1324eaf44f34ea78c69ef1",
+        url="https://dslwuu69twiif.cloudfront.net/totalview/2024.2/totalview_2024.2.11_linux_x86-64.tar",
+    )
+
+    version(
+        "2024.2-powerle",
+        sha256="2bc1ef377e95f6f09d1f221a1dcc2f79415bad9e1e8403c647f38e2d383524d6",
+        url="https://dslwuu69twiif.cloudfront.net/totalview/2024.2/totalview_2024.2.11_linux_powerle.tar",
+    )
+
+    version(
+        "2024.2-linux-arm64",
+        sha256="63f737e61c2fb7f4816bcfc1d00e9e7c39817455531abdd09500f953be4ac75d",
+        url="https://dslwuu69twiif.cloudfront.net/totalview/2024.2/totalview_2024.2.11_linux_arm64.tar",
+    )
+
+    version(
+        "2024.1-x86-64",
+        sha256="964b73e70cb9046ce320bb0f95891b05c96a59117e5243fdc269855831c7059b",
+        url="https://dslwuu69twiif.cloudfront.net/totalview/2024.1/totalview_2024.1.21_linux_x86-64.tar",
+    )
+
+    version(
+        "2024.1-powerle",
+        sha256="c4dd8a3099d4f6ed23a6646b1d091129e0bf0b10c7a0d7ec73bd767818bab39b",
+        url="https://dslwuu69twiif.cloudfront.net/totalview/2024.1/totalview_2024.1.21_linux_powerle.tar",
+    )
+
+    version(
+        "2024.1-linux-arm64",
+        sha256="769527478dceb30855413970621f09a9dc54ef863ddaf75bb5a40142a54af346",
+        url="https://dslwuu69twiif.cloudfront.net/totalview/2024.1/totalview_2024.1.21_linux_arm64.tar",
+    )
 
     def setup_run_environment(self, env):
         env.prepend_path(
@@ -101,31 +92,25 @@ class Totalview(Package):
         arg_list = ["-agree", "-nosymlink", "-directory", "{0}".format(prefix)]
 
         # Platform specification.
-        if spec.target.family == "x86_64":
+        if spec.target.family == "x86_64" and spec.platform == "linux":
             arg_list.extend(["-platform", "linux-x86-64"])
-        elif spec.target.family == "x86":
-            arg_list.extend(["-platform", "linux-x86"])
         elif spec.target.family == "aarch64":
             arg_list.extend(["-platform", "linux-arm64"])
         elif spec.target.family == "ppc64le":
             arg_list.extend(["-platform", "linux-powerle"])
-        elif spec.target.family == "ppc64":
-            arg_list.extend(["-platform", "linux-power"])
         else:
             raise InstallError("Architecture {0} not permitted!".format(spec.target.family))
 
-        # Docs are the 'base' install used with every architecture.
         install_cmd.exe.extend(arg_list)
-        install_cmd("-install", "doc-pdf")
 
-        # Run install script for totalview and memoryscape (optional).
-        with working_dir("./totalview.{0}".format(self.version)):
+        # Run install script for totalview (which automatically installs memoryscape)
+        install_cmd = which("./Install")
+        arg_list.extend(["-install", "totalview"])
+        install_cmd.exe.extend(arg_list)
+        install_cmd()
 
-            install_cmd = which("./Install")
-            arg_list.extend(["-install", "totalview"])
-            # If including memoryscape.
-            if "+memoryscape" in spec:
-                arg_list.append("memoryscape")
-
-            install_cmd.exe.extend(arg_list)
-            install_cmd()
+        # If a license file was created
+        symlink(
+            join_path(self.prefix, "tv_license", "license.lic"),
+            join_path(self.prefix, "toolworks", "tv_license", "license.lic"),
+        )

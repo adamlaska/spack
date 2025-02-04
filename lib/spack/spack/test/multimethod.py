@@ -1,25 +1,19 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 """Test for multi_method dispatch."""
-import os
-import sys
 
 import pytest
 
+import spack.concretize
+import spack.config
 import spack.platforms
-import spack.repo
-import spack.spec
 from spack.multimethod import NoSuchMethodError
 
 pytestmark = [
     pytest.mark.usefixtures("mock_packages", "config"),
-    pytest.mark.skipif(
-        os.environ.get("SPACK_TEST_SOLVER") == "original" or sys.platform == "win32",
-        reason="The original concretizer cannot concretize most of the specs",
-    ),
+    pytest.mark.not_on_windows("Not running on windows"),
 ]
 
 
@@ -34,7 +28,7 @@ def pkg_name(request):
 
 
 def test_no_version_match(pkg_name):
-    spec = spack.spec.Spec(pkg_name + "@2.0").concretized()
+    spec = spack.concretize.concretize_one(pkg_name + "@2.0")
     with pytest.raises(NoSuchMethodError):
         spec.package.no_version_2()
 
@@ -54,8 +48,8 @@ def test_no_version_match(pkg_name):
         ("^mpich2@1.2", "mpi_version", 2),
         ("^mpich@1.0", "mpi_version", 1),
         # Undefined mpi versions
-        ("^mpich@0.4", "mpi_version", 1),
-        ("^mpich@1.4", "mpi_version", 1),
+        ("^mpich@=0.4", "mpi_version", 1),
+        ("^mpich@=1.4", "mpi_version", 1),
         # Constraints on compilers with a default
         ("%gcc", "has_a_default", "gcc"),
         ("%clang", "has_a_default", "clang"),
@@ -73,9 +67,15 @@ def test_no_version_match(pkg_name):
         ("", "boolean_false_first", "True"),
     ],
 )
-def test_multimethod_calls(pkg_name, constraint_str, method_name, expected_result):
-    s = spack.spec.Spec(pkg_name + constraint_str).concretized()
-    msg = "Method {0} from {1} is giving a wrong result".format(method_name, s)
+def test_multimethod_calls(
+    pkg_name, constraint_str, method_name, expected_result, compiler_factory
+):
+    # Add apple-clang, as it is required by one of the tests
+    with spack.config.override(
+        "compilers", [compiler_factory(spec="apple-clang@9.1.0", operating_system="elcapitan")]
+    ):
+        s = spack.concretize.concretize_one(pkg_name + constraint_str)
+    msg = f"Method {method_name} from {s} is giving a wrong result"
     assert getattr(s.package, method_name)() == expected_result, msg
 
 
@@ -83,10 +83,10 @@ def test_target_match(pkg_name):
     platform = spack.platforms.host()
     targets = list(platform.targets.values())
     for target in targets[:-1]:
-        s = spack.spec.Spec(pkg_name + " target=" + target.name).concretized()
+        s = spack.concretize.concretize_one(pkg_name + " target=" + target.name)
         assert s.package.different_by_target() == target.name
 
-    s = spack.spec.Spec(pkg_name + " target=" + targets[-1].name).concretized()
+    s = spack.concretize.concretize_one(pkg_name + " target=" + targets[-1].name)
     if len(targets) == 1:
         assert s.package.different_by_target() == targets[-1].name
     else:
@@ -107,14 +107,14 @@ def test_target_match(pkg_name):
         ("multimethod@2.0", "inherited_and_overridden", "base@2.0"),
         # Diamond-like inheritance (even though the MRO linearize everything)
         ("multimethod-diamond@1.0", "diamond_inheritance", "base_package"),
-        ("multimethod-base@1.0", "diamond_inheritance", "base_package"),
+        ("multimethod-base@=1.0", "diamond_inheritance", "base_package"),
         ("multimethod-diamond@2.0", "diamond_inheritance", "first_parent"),
         ("multimethod-inheritor@2.0", "diamond_inheritance", "first_parent"),
-        ("multimethod-diamond@3.0", "diamond_inheritance", "second_parent"),
-        ("multimethod-diamond-parent@3.0", "diamond_inheritance", "second_parent"),
+        ("multimethod-diamond@=3.0", "diamond_inheritance", "second_parent"),
+        ("multimethod-diamond-parent@=3.0", "diamond_inheritance", "second_parent"),
         ("multimethod-diamond@4.0", "diamond_inheritance", "subclass"),
     ],
 )
 def test_multimethod_calls_and_inheritance(spec_str, method_name, expected_result):
-    s = spack.spec.Spec(spec_str).concretized()
+    s = spack.concretize.concretize_one(spec_str)
     assert getattr(s.package, method_name)() == expected_result

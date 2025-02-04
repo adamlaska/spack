@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -15,9 +14,6 @@ class NosourceInstall(BundlePackage):
     version("1.0")
 
     depends_on("dependency-install")
-
-    # The install phase must be specified.
-    phases = ["install"]
 
     # The install method must also be present.
     def install(self, spec, prefix):

@@ -1,10 +1,11 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import filecmp
+import io
 import os
+import pathlib
 import shutil
 import sys
 
@@ -12,10 +13,11 @@ import pytest
 
 from llnl.util.filesystem import FileFilter
 
+import spack.cmd.style
 import spack.main
 import spack.paths
 import spack.repo
-from spack.cmd.style import changed_files
+from spack.cmd.style import _run_import_check, changed_files
 from spack.util.executable import which
 
 #: directory with sample style files
@@ -25,24 +27,18 @@ style_data = os.path.join(spack.paths.test_path, "data", "style")
 style = spack.main.SpackCommand("style")
 
 
-def has_develop_branch():
-    git = which("git")
-    if not git:
-        return False
+ISORT = which("isort")
+BLACK = which("black")
+FLAKE8 = which("flake8")
+MYPY = which("mypy")
+
+
+@pytest.fixture(autouse=True)
+def has_develop_branch(git):
+    """spack style requires git and a develop branch to run -- skip if we're missing either."""
     git("show-ref", "--verify", "--quiet", "refs/heads/develop", fail_on_error=False)
-    return git.returncode == 0
-
-
-# spack style requires git to run -- skip the tests if it's not there
-pytestmark = pytest.mark.skipif(
-    not has_develop_branch(), reason="requires git with develop branch"
-)
-
-# The style tools have requirements to use newer Python versions.  We simplify by
-# requiring Python 3.6 or higher to run spack style.
-skip_old_python = pytest.mark.skipif(
-    sys.version_info < (3, 6), reason="requires Python 3.6 or higher"
-)
+    if git.returncode != 0:
+        pytest.skip("requires git and a develop branch")
 
 
 @pytest.fixture(scope="function")
@@ -51,7 +47,7 @@ def flake8_package(tmpdir):
     change to the ``flake8`` mock package, yields the filename, then undoes the
     change on cleanup.
     """
-    repo = spack.repo.Repo(spack.paths.mock_packages_path)
+    repo = spack.repo.from_path(spack.paths.mock_packages_path)
     filename = repo.filename_for_package_name("flake8")
     rel_path = os.path.dirname(os.path.relpath(filename, spack.paths.prefix))
     tmp = tmpdir / rel_path / "flake8-ci-package.py"
@@ -67,7 +63,7 @@ def flake8_package(tmpdir):
 @pytest.fixture
 def flake8_package_with_errors(scope="function"):
     """A flake8 package with errors."""
-    repo = spack.repo.Repo(spack.paths.mock_packages_path)
+    repo = spack.repo.from_path(spack.paths.mock_packages_path)
     filename = repo.filename_for_package_name("flake8")
     tmp = filename + ".tmp"
 
@@ -84,36 +80,34 @@ def flake8_package_with_errors(scope="function"):
     yield tmp
 
 
-def test_changed_files_from_git_rev_base(tmpdir, capfd):
+def test_changed_files_from_git_rev_base(git, tmpdir, capfd):
     """Test arbitrary git ref as base."""
-    git = which("git", required=True)
     with tmpdir.as_cwd():
         git("init")
         git("checkout", "-b", "main")
         git("config", "user.name", "test user")
         git("config", "user.email", "test@user.com")
-        git("commit", "--allow-empty", "-m", "initial commit")
+        git("commit", "--no-gpg-sign", "--allow-empty", "-m", "initial commit")
 
         tmpdir.ensure("bin/spack")
         assert changed_files(base="HEAD") == ["bin/spack"]
         assert changed_files(base="main") == ["bin/spack"]
 
         git("add", "bin/spack")
-        git("commit", "-m", "v1")
+        git("commit", "--no-gpg-sign", "-m", "v1")
         assert changed_files(base="HEAD") == []
         assert changed_files(base="HEAD~") == ["bin/spack"]
 
 
-def test_changed_no_base(tmpdir, capfd):
+def test_changed_no_base(git, tmpdir, capfd):
     """Ensure that we fail gracefully with no base branch."""
     tmpdir.join("bin").ensure("spack")
-    git = which("git", required=True)
     with tmpdir.as_cwd():
         git("init")
         git("config", "user.name", "test user")
         git("config", "user.email", "test@user.com")
         git("add", ".")
-        git("commit", "-m", "initial commit")
+        git("commit", "--no-gpg-sign", "-m", "initial commit")
 
         with pytest.raises(SystemExit):
             changed_files(base="foobar")
@@ -135,7 +129,7 @@ def test_changed_files_all_files():
     assert len(files) > 6000
 
     # a builtin package
-    zlib = spack.repo.path.get_pkg_class("zlib")
+    zlib = spack.repo.PATH.get_pkg_class("zlib")
     zlib_file = zlib.module.__file__
     if zlib_file.endswith("pyc"):
         zlib_file = zlib_file[:-1]
@@ -145,7 +139,7 @@ def test_changed_files_all_files():
     assert os.path.join(spack.paths.module_path, "spec.py") in files
 
     # a mock package
-    repo = spack.repo.Repo(spack.paths.mock_packages_path)
+    repo = spack.repo.from_path(spack.paths.mock_packages_path)
     filename = repo.filename_for_package_name("flake8")
     assert filename in files
 
@@ -156,14 +150,6 @@ def test_changed_files_all_files():
     assert not any(f.startswith(spack.paths.external_path) for f in files)
 
 
-@pytest.mark.skipif(sys.version_info >= (3, 6), reason="doesn't apply to newer python")
-def test_fail_on_old_python():
-    """Ensure that `spack style` runs but fails with older python."""
-    output = style(fail_on_error=False)
-    assert "spack style requires Python 3.6" in output
-
-
-@skip_old_python
 def test_bad_root(tmpdir):
     """Ensure that `spack style` doesn't run on non-spack directories."""
     output = style("--root", str(tmpdir), fail_on_error=False)
@@ -180,10 +166,8 @@ def test_style_is_package(tmpdir):
 
 
 @pytest.fixture
-def external_style_root(flake8_package_with_errors, tmpdir):
+def external_style_root(git, flake8_package_with_errors, tmpdir):
     """Create a mock git repository for running spack style."""
-    git = which("git", required=True)
-
     # create a sort-of spack-looking directory
     script = tmpdir / "bin" / "spack"
     script.ensure()
@@ -198,7 +182,7 @@ def external_style_root(flake8_package_with_errors, tmpdir):
         git("config", "user.name", "test user")
         git("config", "user.email", "test@user.com")
         git("add", ".")
-        git("commit", "-m", "initial commit")
+        git("commit", "--no-gpg-sign", "-m", "initial commit")
         git("branch", "-m", "develop")
         git("checkout", "-b", "feature")
 
@@ -210,14 +194,13 @@ def external_style_root(flake8_package_with_errors, tmpdir):
     # add the buggy file on the feature branch
     with tmpdir.as_cwd():
         git("add", str(py_file))
-        git("commit", "-m", "add new file")
+        git("commit", "--no-gpg-sign", "-m", "add new file")
 
     yield tmpdir, py_file
 
 
-@skip_old_python
-@pytest.mark.skipif(not which("isort"), reason="isort is not installed.")
-@pytest.mark.skipif(not which("black"), reason="black is not installed.")
+@pytest.mark.skipif(not ISORT, reason="isort is not installed.")
+@pytest.mark.skipif(not BLACK, reason="black is not installed.")
 def test_fix_style(external_style_root):
     """Make sure spack style --fix works."""
     tmpdir, py_file = external_style_root
@@ -235,12 +218,11 @@ def test_fix_style(external_style_root):
     assert filecmp.cmp(broken_py, fixed_py)
 
 
-@skip_old_python
-@pytest.mark.skipif(not which("flake8"), reason="flake8 is not installed.")
-@pytest.mark.skipif(not which("isort"), reason="isort is not installed.")
-@pytest.mark.skipif(not which("mypy"), reason="mypy is not installed.")
-@pytest.mark.skipif(not which("black"), reason="black is not installed.")
-def test_external_root(external_style_root):
+@pytest.mark.skipif(not FLAKE8, reason="flake8 is not installed.")
+@pytest.mark.skipif(not ISORT, reason="isort is not installed.")
+@pytest.mark.skipif(not MYPY, reason="mypy is not installed.")
+@pytest.mark.skipif(not BLACK, reason="black is not installed.")
+def test_external_root(external_style_root, capfd):
     """Ensure we can run in a separate root directory w/o configuration files."""
     tmpdir, py_file = external_style_root
 
@@ -255,18 +237,17 @@ def test_external_root(external_style_root):
     assert "%s Imports are incorrectly sorted" % str(py_file) in output
 
     # mypy error
-    assert 'lib/spack/spack/dummy.py:10: error: Name "Package" is not defined' in output
+    assert 'lib/spack/spack/dummy.py:9: error: Name "Package" is not defined' in output
 
     # black error
     assert "--- lib/spack/spack/dummy.py" in output
     assert "+++ lib/spack/spack/dummy.py" in output
 
     # flake8 error
-    assert "lib/spack/spack/dummy.py:7: [F401] 'os' imported but unused" in output
+    assert "lib/spack/spack/dummy.py:6: [F401] 'os' imported but unused" in output
 
 
-@skip_old_python
-@pytest.mark.skipif(not which("flake8"), reason="flake8 is not installed.")
+@pytest.mark.skipif(not FLAKE8, reason="flake8 is not installed.")
 def test_style(flake8_package, tmpdir):
     root_relative = os.path.relpath(flake8_package, spack.paths.prefix)
 
@@ -292,8 +273,7 @@ def test_style(flake8_package, tmpdir):
     assert "spack style checks were clean" in output
 
 
-@skip_old_python
-@pytest.mark.skipif(not which("flake8"), reason="flake8 is not installed.")
+@pytest.mark.skipif(not FLAKE8, reason="flake8 is not installed.")
 def test_style_with_errors(flake8_package_with_errors):
     root_relative = os.path.relpath(flake8_package_with_errors, spack.paths.prefix)
     output = style(
@@ -304,9 +284,8 @@ def test_style_with_errors(flake8_package_with_errors):
     assert "spack style found errors" in output
 
 
-@skip_old_python
-@pytest.mark.skipif(not which("black"), reason="black is not installed.")
-@pytest.mark.skipif(not which("flake8"), reason="flake8 is not installed.")
+@pytest.mark.skipif(not BLACK, reason="black is not installed.")
+@pytest.mark.skipif(not FLAKE8, reason="flake8 is not installed.")
 def test_style_with_black(flake8_package_with_errors):
     output = style("--tool", "black,flake8", flake8_package_with_errors, fail_on_error=False)
     assert "black found errors" in output
@@ -314,7 +293,115 @@ def test_style_with_black(flake8_package_with_errors):
     assert "spack style found errors" in output
 
 
-@skip_old_python
 def test_skip_tools():
-    output = style("--skip", "isort,mypy,black,flake8")
+    output = style("--skip", "import,isort,mypy,black,flake8")
     assert "Nothing to run" in output
+
+
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="requires Python 3.9+")
+def test_run_import_check(tmp_path: pathlib.Path):
+    file = tmp_path / "issues.py"
+    contents = '''
+import spack.cmd
+import spack.config  # do not drop this import because of this comment
+
+# this comment about spack.error should not be removed
+class Example(spack.build_systems.autotools.AutotoolsPackage):
+    """this is a docstring referencing unused spack.error.SpackError, which is fine"""
+    pass
+
+def foo(config: "spack.error.SpackError"):
+    # the type hint is quoted, so it should not be removed
+    spack.util.executable.Executable("example")
+    print(spack.__version__)
+'''
+    file.write_text(contents)
+    root = str(tmp_path)
+    output_buf = io.StringIO()
+    exit_code = _run_import_check(
+        [str(file)],
+        fix=False,
+        out=output_buf,
+        root_relative=False,
+        root=spack.paths.prefix,
+        working_dir=root,
+    )
+    output = output_buf.getvalue()
+
+    assert "issues.py: redundant import: spack.cmd" in output
+    assert "issues.py: redundant import: spack.config" not in output  # comment prevents removal
+    assert "issues.py: missing import: spack" in output  # used by spack.__version__
+    assert "issues.py: missing import: spack.build_systems.autotools" in output
+    assert "issues.py: missing import: spack.util.executable" in output
+    assert "issues.py: missing import: spack.error" not in output  # not directly used
+    assert exit_code == 1
+    assert file.read_text() == contents  # fix=False should not change the file
+
+    # run it with --fix, should have the same output.
+    output_buf = io.StringIO()
+    exit_code = _run_import_check(
+        [str(file)],
+        fix=True,
+        out=output_buf,
+        root_relative=False,
+        root=spack.paths.prefix,
+        working_dir=root,
+    )
+    output = output_buf.getvalue()
+    assert exit_code == 1
+    assert "issues.py: redundant import: spack.cmd" in output
+    assert "issues.py: missing import: spack" in output
+    assert "issues.py: missing import: spack.build_systems.autotools" in output
+    assert "issues.py: missing import: spack.util.executable" in output
+
+    # after fix a second fix is idempotent
+    output_buf = io.StringIO()
+    exit_code = _run_import_check(
+        [str(file)],
+        fix=True,
+        out=output_buf,
+        root_relative=False,
+        root=spack.paths.prefix,
+        working_dir=root,
+    )
+    output = output_buf.getvalue()
+    assert exit_code == 0
+    assert not output
+
+    # check that the file was fixed
+    new_contents = file.read_text()
+    assert "import spack.cmd" not in new_contents
+    assert "import spack\n" in new_contents
+    assert "import spack.build_systems.autotools\n" in new_contents
+    assert "import spack.util.executable\n" in new_contents
+
+
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="requires Python 3.9+")
+def test_run_import_check_syntax_error_and_missing(tmp_path: pathlib.Path):
+    (tmp_path / "syntax-error.py").write_text("""this 'is n(ot python code""")
+    output_buf = io.StringIO()
+    exit_code = _run_import_check(
+        [str(tmp_path / "syntax-error.py"), str(tmp_path / "missing.py")],
+        fix=False,
+        out=output_buf,
+        root_relative=True,
+        root=str(tmp_path),
+        working_dir=str(tmp_path / "does-not-matter"),
+    )
+    output = output_buf.getvalue()
+    assert "syntax-error.py: could not parse" in output
+    assert "missing.py: could not parse" in output
+    assert exit_code == 1
+
+
+def test_case_sensitive_imports(tmp_path: pathlib.Path):
+    # example.Example is a name, while example.example is a module.
+    (tmp_path / "lib" / "spack" / "example").mkdir(parents=True)
+    (tmp_path / "lib" / "spack" / "example" / "__init__.py").write_text("class Example:\n    pass")
+    (tmp_path / "lib" / "spack" / "example" / "example.py").write_text("foo = 1")
+    assert spack.cmd.style._module_part(str(tmp_path), "example.Example") == "example"
+
+
+def test_pkg_imports():
+    assert spack.cmd.style._module_part(spack.paths.prefix, "spack.pkg.builtin.boost") is None
+    assert spack.cmd.style._module_part(spack.paths.prefix, "spack.pkg") is None

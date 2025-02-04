@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -9,8 +8,7 @@ import llnl.util.tty as tty
 from llnl.util.filesystem import mkdirp
 from llnl.util.symlink import symlink
 
-from spack.util.editor import editor
-from spack.util.executable import Executable, which
+import spack.util.editor as ed
 
 
 def pre_install(spec):
@@ -38,29 +36,9 @@ def set_up_license(pkg):
         if not os.path.exists(license_path):
             # Create a new license file
             write_license_file(pkg, license_path)
-            # Open up file in user's favorite $EDITOR for editing
-            editor_exe = None
-            if "VISUAL" in os.environ:
-                editor_exe = Executable(os.environ["VISUAL"])
-                # gvim runs in the background by default so we force it to run
-                # in the foreground to make sure the license file is updated
-                # before we try to install
-                if "gvim" in os.environ["VISUAL"]:
-                    editor_exe.add_default_arg("-f")
-            elif "EDITOR" in os.environ:
-                editor_exe = Executable(os.environ["EDITOR"])
-            else:
-                editor_exe = which("vim", "vi", "emacs", "nano")
-            if editor_exe is None:
-                raise EnvironmentError(
-                    "No text editor found! Please set the VISUAL and/or EDITOR"
-                    " environment variable(s) to your preferred text editor."
-                )
 
-            def editor_wrapper(exe, args):
-                editor_exe(license_path)
-
-            editor(license_path, _exec_func=editor_wrapper)
+            # use spack.util.executable so the editor does not hang on return here
+            ed.editor(license_path, exec_fn=ed.executable)
         else:
             # Use already existing license file
             tty.msg("Found already existing license %s" % license_path)
@@ -163,13 +141,13 @@ def write_license_file(pkg, license_path):
         os.makedirs(os.path.dirname(license_path))
 
     # Output
-    with open(license_path, "w") as f:
+    with open(license_path, "w", encoding="utf-8") as f:
         for line in txt.splitlines():
             f.write("{0}{1}\n".format(pkg.license_comment, line))
         f.close()
 
 
-def post_install(spec):
+def post_install(spec, explicit=None):
     """This hook symlinks local licenses to the global license for
     licensed software.
     """

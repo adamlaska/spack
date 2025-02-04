@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -25,13 +24,11 @@ depending on the scenario, regular old conditionals might be clearer,
 so package authors should use their judgement.
 """
 import functools
-import inspect
+from contextlib import contextmanager
 
-from llnl.util.lang import caller_locals
-
-import spack.directives
+import spack.directives_meta
 import spack.error
-from spack.spec import Spec
+import spack.spec
 
 
 class MultiMethodMeta(type):
@@ -52,7 +49,7 @@ class MultiMethodMeta(type):
         super(MultiMethodMeta, cls).__init__(name, bases, attr_dict)
 
 
-class SpecMultiMethod(object):
+class SpecMultiMethod:
     """This implements a multi-method for Spack specs.  Packages are
     instantiated with a particular spec, and you may want to
     execute different versions of methods based on what the spec
@@ -120,36 +117,40 @@ class SpecMultiMethod(object):
                 return method
         return self.default or None
 
-    def __call__(self, package_self, *args, **kwargs):
+    def __call__(self, package_or_builder_self, *args, **kwargs):
         """Find the first method with a spec that matches the
         package's spec.  If none is found, call the default
         or if there is none, then raise a NoSuchMethodError.
         """
-        spec_method = self._get_method_by_spec(package_self.spec)
+        spec_method = self._get_method_by_spec(package_or_builder_self.spec)
         if spec_method:
-            return spec_method(package_self, *args, **kwargs)
+            return spec_method(package_or_builder_self, *args, **kwargs)
         # Unwrap the MRO of `package_self by hand. Note that we can't
         # use `super()` here, because using `super()` recursively
         # requires us to know the class of `package_self`, as well as
         # its superclasses for successive calls. We don't have that
         # information within `SpecMultiMethod`, because it is not
         # associated with the package class.
-        for cls in inspect.getmro(package_self.__class__)[1:]:
+        for cls in package_or_builder_self.__class__.__mro__[1:]:
             superself = cls.__dict__.get(self.__name__, None)
+
             if isinstance(superself, SpecMultiMethod):
                 # Check parent multimethod for method for spec.
-                superself_method = superself._get_method_by_spec(package_self.spec)
+                superself_method = superself._get_method_by_spec(package_or_builder_self.spec)
                 if superself_method:
-                    return superself_method(package_self, *args, **kwargs)
+                    return superself_method(package_or_builder_self, *args, **kwargs)
             elif superself:
-                return superself(package_self, *args, **kwargs)
+                return superself(package_or_builder_self, *args, **kwargs)
 
         raise NoSuchMethodError(
-            type(package_self), self.__name__, package_self.spec, [m[0] for m in self.method_list]
+            type(package_or_builder_self),
+            self.__name__,
+            package_or_builder_self.spec,
+            [m[0] for m in self.method_list],
         )
 
 
-class when(object):
+class when:
     def __init__(self, condition):
         """Can be used both as a decorator, for multimethods, or as a context
         manager to group ``when=`` arguments together.
@@ -160,9 +161,9 @@ class when(object):
             condition (str): condition to be met
         """
         if isinstance(condition, bool):
-            self.spec = Spec() if condition else None
+            self.spec = spack.spec.Spec() if condition else None
         else:
-            self.spec = Spec(condition)
+            self.spec = spack.spec.Spec(condition)
 
     def __call__(self, method):
         """This annotation lets packages declare multiple versions of
@@ -224,15 +225,13 @@ class when(object):
            platform-specific versions.  There's not much we can do to get
            around this because of the way decorators work.
         """
-        # In Python 2, Get the first definition of the method in the
-        # calling scope by looking at the caller's locals. In Python 3,
-        # we handle this using MultiMethodMeta.__prepare__.
-        if MultiMethodMeta._locals is None:
-            MultiMethodMeta._locals = caller_locals()
+        assert (
+            MultiMethodMeta._locals is not None
+        ), "cannot use multimethod, missing MultiMethodMeta metaclass?"
 
         # Create a multimethod with this name if there is not one already
         original_method = MultiMethodMeta._locals.get(method.__name__)
-        if not type(original_method) == SpecMultiMethod:
+        if not isinstance(original_method, SpecMultiMethod):
             original_method = SpecMultiMethod(original_method)
 
         if self.spec is not None:
@@ -261,24 +260,31 @@ class when(object):
         and add their constraint to whatever may be already present in the directive
         `when=` argument.
         """
-        spack.directives.DirectiveMeta.push_to_context(str(self.spec))
+        spack.directives_meta.DirectiveMeta.push_to_context(str(self.spec))
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        spack.directives.DirectiveMeta.pop_from_context()
+        spack.directives_meta.DirectiveMeta.pop_from_context()
+
+
+@contextmanager
+def default_args(**kwargs):
+    spack.directives_meta.DirectiveMeta.push_default_args(kwargs)
+    yield
+    spack.directives_meta.DirectiveMeta.pop_default_args()
 
 
 class MultiMethodError(spack.error.SpackError):
     """Superclass for multimethod dispatch errors"""
 
     def __init__(self, message):
-        super(MultiMethodError, self).__init__(message)
+        super().__init__(message)
 
 
 class NoSuchMethodError(spack.error.SpackError):
     """Raised when we can't find a version of a multi-method."""
 
     def __init__(self, cls, method_name, spec, possible_specs):
-        super(NoSuchMethodError, self).__init__(
+        super().__init__(
             "Package %s does not support %s called with %s.  Options are: %s"
             % (cls.__name__, method_name, spec, ", ".join(str(s) for s in possible_specs))
         )

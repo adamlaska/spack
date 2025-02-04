@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -12,11 +11,15 @@ class Exampm(CMakePackage):
     homepage = "https://github.com/ECP-copa/ExaMPM"
     git = "https://github.com/ECP-copa/ExaMPM.git"
 
-    maintainers = ["junghans", "streeve", "sslattery"]
+    maintainers("junghans", "streeve", "sslattery")
 
     tags = ["proxy-app", "ecp-proxy-app"]
 
+    license("BSD-3-Clause")
+
     version("master", branch="master")
+
+    depends_on("cxx", type="build")  # generated
 
     variant("shared", default=True, description="Build shared libraries")
 

@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -16,7 +15,7 @@ class Gams(Package):
     homepage = "https://www.gams.com/"
     manual_download = True
 
-    version("27.2", "4f3f3484a4389661e0522a4cfe0289fd", expand=False)
+    version("27.2", md5="4f3f3484a4389661e0522a4cfe0289fd", expand=False)
 
     def url_for_version(self, version):
         return "file://{0}/linux_x64_64_sfx.exe".format(os.getcwd())

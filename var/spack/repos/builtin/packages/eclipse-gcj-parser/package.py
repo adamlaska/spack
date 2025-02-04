@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -18,7 +17,7 @@ class EclipseGcjParser(Package):
     # Official download found at (see ecj-4.8M4.jar and ecjsrc-4.8M4.jar)
     # http://download.eclipse.org/eclipse/downloads/drops4/S-4.8M4-201712062000/
 
-    maintainers = ["citibeth"]
+    maintainers("citibeth")
 
     # The server is sometimes a bit slow to respond
     fetch_options = {"timeout": 60}

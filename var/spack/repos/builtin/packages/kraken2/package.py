@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -16,7 +15,9 @@ class Kraken2(Package):
     homepage = "https://ccb.jhu.edu/software/kraken2/"
     url = "https://github.com/DerrickWood/kraken2/archive/v2.1.1.tar.gz"
 
-    maintainers = ["rberg2"]
+    maintainers("rberg2")
+
+    license("MIT")
 
     version("2.1.2", sha256="e5f431e8bc3d5493a79e1d8125f4aacbad24f9ea2cc9657b66da06a32bef6ff3")
     version("2.1.1", sha256="8f3e928cdb32b9e8e6f55b44703d1557b2a5fc3f30f63e8d16e465e19a81dee4")
@@ -29,6 +30,8 @@ class Kraken2(Package):
     version(
         "2.0.6-beta", sha256="d77db6251179c4d7e16bc9b5e5e9043d25acf81f3e32ad6eadfba829a31e1d09"
     )
+
+    depends_on("cxx", type="build")  # generated
 
     depends_on("perl", type=("build", "run"))
     depends_on("rsync", type=("run"))

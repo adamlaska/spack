@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -16,10 +15,10 @@ class Adf(Package):
     homepage = "https://www.scm.com/product/adf/"
     manual_download = True
 
-    version("2017.113", "666ef15d253b74c707dd14da35e7cf283ca20e21e24ed43cb953fb9d1f2f1e15")
+    version("2017.113", sha256="666ef15d253b74c707dd14da35e7cf283ca20e21e24ed43cb953fb9d1f2f1e15")
 
     def url_for_version(self, version):
-        return "file://{0}/adf/adf{1}.pc64_linux.openmpi.bin.tgz".format(os.getcwd(), version)
+        return f"file://{os.getcwd()}/adf/adf{version}.pc64_linux.openmpi.bin.tgz"
 
     # Licensing
     license_required = True

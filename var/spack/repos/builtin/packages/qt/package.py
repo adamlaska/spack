@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import itertools
@@ -7,14 +6,13 @@ import os
 import platform
 import sys
 
-import llnl.util.tty as tty
-
 from spack.operating_systems.linux_distro import kernel_version
 from spack.operating_systems.mac_os import macos_version
 from spack.package import *
 
 MACOS_VERSION = macos_version() if sys.platform == "darwin" else None
 LINUX_VERSION = kernel_version() if platform.system() == "Linux" else None
+IS_WINDOWS = sys.platform == "win32"
 
 
 class Qt(Package):
@@ -27,109 +25,39 @@ class Qt(Package):
     url = "https://download.qt.io/archive/qt/5.15/5.15.2/single/qt-everywhere-src-5.15.2.tar.xz"
     list_url = "https://download.qt.io/archive/qt/"
     list_depth = 3
-    maintainers = ["sethrj"]
 
     phases = ["configure", "build", "install"]
 
+    license("LGPL-3.0-only")
+
+    version("5.15.16", sha256="efa99827027782974356aceff8a52bd3d2a8a93a54dd0db4cca41b5e35f1041c")
+    version("5.15.15", sha256="b423c30fe3ace7402e5301afbb464febfb3da33d6282a37a665be1e51502335e")
+    version("5.15.14", sha256="fdd3a4f197d2c800ee0085c721f4bef60951cbda9e9c46e525d1412f74264ed7")
+    version("5.15.13", sha256="9550ec8fc758d3d8d9090e261329700ddcd712e2dda97e5fcfeabfac22bea2ca")
+    version("5.15.12", sha256="93f2c0889ee2e9cdf30c170d353c3f829de5f29ba21c119167dee5995e48ccce")
+    version("5.15.11", sha256="7426b1eaab52ed169ce53804bdd05dfe364f761468f888a0f15a308dc1dc2951")
+    version("5.15.10", sha256="b545cb83c60934adc9a6bbd27e2af79e5013de77d46f5b9f5bb2a3c762bf55ca")
+    version("5.15.9", sha256="26d5f36134db03abe4a6db794c7570d729c92a3fc1b0bf9b1c8f86d0573cd02f")
+    version("5.15.8", sha256="776a9302c336671f9406a53bd30b8e36f825742b2ec44a57c08217bff0fa86b9")
+    version("5.15.7", sha256="8a71986676a3f37a198a9113acedbfd5bc5606a459b6b85816d951458adbe9a0")
+    version("5.15.6", sha256="ebc77d27934b70b25b3dc34fbec7c4471eb451848e891c42b32409ea30fe309f")
     version("5.15.5", sha256="5a97827bdf9fd515f43bc7651defaf64fecb7a55e051c79b8f80510d0e990f06")
     version("5.15.4", sha256="615ff68d7af8eef3167de1fd15eac1b150e1fd69d1e2f4239e54447e7797253b")
     version("5.15.3", sha256="b7412734698a87f4a0ae20751bab32b1b07fdc351476ad8e35328dbe10efdedb")
     version("5.15.2", sha256="3a530d1b243b5dec00bc54937455471aaa3e56849d2593edb8ded07228202240")
     version("5.14.2", sha256="c6fcd53c744df89e7d3223c02838a33309bd1c291fcb6f9341505fe99f7f19fa")
-    version(
-        "5.14.1",
-        sha256="6f17f488f512b39c2feb57d83a5e0a13dcef32999bea2e2a8f832f54a29badb8",
-        deprecated=True,
-    )
-    version(
-        "5.14.0",
-        sha256="be9a77cd4e1f9d70b58621d0753be19ea498e6b0da0398753e5038426f76a8ba",
-        deprecated=True,
-    )
-    version(
-        "5.13.1",
-        sha256="adf00266dc38352a166a9739f1a24a1e36f1be9c04bf72e16e142a256436974e",
-        deprecated=True,
-    )
     version("5.12.10", sha256="3e0ee1e57f5cf3eeb038d0b4b22c7eb442285c62639290756b39dc93a1d0e14f")
-    version(
-        "5.12.7",
-        sha256="873783a0302129d98a8f63de9afe4520fb5f8d5316be8ad7b760c59875cd8a8d",
-        deprecated=True,
-    )
-    version(
-        "5.12.5",
-        sha256="a2299e21db7767caf98242767bffb18a2a88a42fee2d6a393bedd234f8c91298",
-        deprecated=True,
-    )
-    version(
-        "5.12.2",
-        sha256="59b8cb4e728450b21224dcaaa40eb25bafc5196b6988f2225c394c6b7f881ff5",
-        deprecated=True,
-    )
-    version(
-        "5.11.3",
-        sha256="859417642713cee2493ee3646a7fee782c9f1db39e41d7bb1322bba0c5f0ff4d",
-        deprecated=True,
-    )
-    version(
-        "5.11.2",
-        sha256="c6104b840b6caee596fa9a35bc5f57f67ed5a99d6a36497b6fe66f990a53ca81",
-        deprecated=True,
-    )
-    version(
-        "5.10.0",
-        sha256="936d4cf5d577298f4f9fdb220e85b008ae321554a5fcd38072dc327a7296230e",
-        deprecated=True,
-    )
     version("5.9.9", sha256="5ce285209290a157d7f42ec8eb22bf3f1d76f2e03a95fc0b99b553391be01642")
-    version(
-        "5.9.1",
-        sha256="7b41a37d4fe5e120cdb7114862c0153f86c07abbec8db71500443d2ce0c89795",
-        deprecated=True,
-    )
-    version(
-        "5.9.0",
-        sha256="f70b5c66161191489fc13c7b7eb69bf9df3881596b183e7f6d94305a39837517",
-        deprecated=True,
-    )
-    version(
-        "5.8.0",
-        sha256="0f4c54386d3dbac0606a936a7145cebb7b94b0ca2d29bc001ea49642984824b6",
-        deprecated=True,
-    )
-    version(
-        "5.7.1",
-        sha256="46ebca977deb629c5e69c2545bc5fe13f7e40012e5e2e451695c583bd33502fa",
-        deprecated=True,
-    )
-    version(
-        "5.7.0",
-        sha256="a6a2632de7e44bbb790bc3b563f143702c610464a7f537d02036749041fd1800",
-        deprecated=True,
-    )
     version("5.6.3", sha256="2fa0cf2e5e8841b29a4be62062c1a65c4f6f2cf1beaf61a5fd661f520cd776d0")
-    version(
-        "5.5.1",
-        sha256="c7fad41a009af1996b62ec494e438aedcb072b3234b2ad3eeea6e6b1f64be3b3",
-        deprecated=True,
-    )
-    version(
-        "5.4.2",
-        sha256="cfc768c55f0a0cd232bed914a9022528f8f2e50cb010bf0e4f3f62db3dfa17bd",
-        deprecated=True,
-    )
-    version(
-        "5.4.0",
-        sha256="1739633424bde3d89164ae6ff1c5c913be38b9997e451558ef873aac4bbc408a",
-        deprecated=True,
-    )
     version("5.3.2", sha256="c8d3fd2ead30705c6673c5e4af6c6f3973346b4fb2bd6079c7be0943a5b0282d")
     version("5.2.1", sha256="84e924181d4ad6db00239d87250cc89868484a14841f77fb85ab1f1dbdcd7da1")
     version("4.8.7", sha256="e2882295097e47fe089f8ac741a95fef47e0a73a3f3cdf21b56990638f626ea0")
     version("4.8.6", sha256="8b14dd91b52862e09b8e6a963507b74bc2580787d171feda197badfa7034032c")
     version("4.8.5", sha256="eb728f8268831dc4373be6403b7dd5d5dde03c169ad6882f9a8cb560df6aa138")
     version("3.3.8b", sha256="1b7a1ff62ec5a9cb7a388e2ba28fda6f960b27f27999482ebeceeadb72ac9f6e")
+
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
 
     variant("debug", default=False, description="Build debug version.")
     variant("dbus", default=False, description="Build with D-Bus support.")
@@ -140,13 +68,24 @@ class Qt(Package):
     )
     variant("gtk", default=False, description="Build with gtkplus.")
     variant("gui", default=True, description="Build the Qt GUI module and dependencies")
-    variant("opengl", default=False, description="Build with OpenGL support.")
+    # Desktop only on Windows
+    variant("opengl", default=False, description="Build with OpenGL support")
+    for plat in ["linux", "darwin", "freebsd"]:
+        with when(f"platform={plat}"):
+            # webkit support requires qtquick2 which requires a GL implementation beyond what
+            # windows system gl provides.
+            # This is unavailable until we get a hardware accelerated option for EGL 2 on Windows
+            # We can use llvm or angle for this, but those are not hardware accelerated, so are not
+            # as useful for things like paraview
+            variant("webkit", default=False, description="Build the Webkit extension")
+    variant("location", default=False, description="Build the Qt Location module.")
     variant("phonon", default=False, description="Build with phonon support.")
     variant("shared", default=True, description="Build shared libraries.")
     variant("sql", default=True, description="Build with SQL support.")
     variant("ssl", default=True, description="Build with OpenSSL support.")
     variant("tools", default=True, description="Build tools, including Qt Designer.")
-    variant("webkit", default=False, description="Build the Webkit extension")
+
+    provides("qmake")
 
     # Patches for qt@3
     patch("qt3-accept.patch", when="@3")
@@ -196,6 +135,9 @@ class Qt(Package):
     patch("qt514-isystem.patch", when="@5.14.2")
     # https://bugreports.qt.io/browse/QTBUG-84037
     patch("qt515-quick3d-assimp.patch", when="@5.15:5+opengl")
+    # https://forum.qt.io/topic/130793/a-problem-with-python-path-when-i-try-to-build-qt-from-source-e-program-is-not-recognized-as-an-internal-or-external-command?_=1722965446110&lang=en-US
+    patch("qt515_masm_python.patch", when="@5.15 platform=windows")
+
     # https://bugreports.qt.io/browse/QTBUG-90395
     patch(
         "https://src.fedoraproject.org/rpms/qt5-qtbase/raw/6ae41be8260f0f5403367eb01f7cd8319779674a/f/qt5-qtbase-gcc11.patch",
@@ -215,48 +157,107 @@ class Qt(Package):
         working_dir="qtwebsockets",
         when="@5.14: %gcc@11:",
     )
+    # patch that adds missing `#include <cstdint>` in several files
+    # required for gcc 13 (even though the original patch was developed for gcc 10)
+    # (see https://gcc.gnu.org/gcc-13/porting_to.html)
+    patch(
+        "https://src.fedoraproject.org/rpms/qt5-qtlocation/raw/b6d99579de9ce5802c592b512a9f644a5e4690b9/f/qtlocation-gcc10.patch",
+        sha256="78c70fbd0c74031c5f0f1f5990e0b4214fc04c5073c67ce1f23863373932ec86",
+        working_dir="qtlocation",
+        when="@5.15.10: %gcc@10:",
+    )
     # https://github.com/microsoft/vcpkg/issues/21055
     patch("qt5-macos12.patch", working_dir="qtbase", when="@5.14: %apple-clang@13:")
+    # https://codereview.qt-project.org/c/qt/qtbase/+/503172
+    patch(
+        "https://github.com/qt/qtbase/commit/cdf64b0e47115cc473e1afd1472b4b09e130b2a5.patch?full_index=1",
+        sha256="2b881ffb2808f8fa79f51f8bec71be91a886bcdc59b1d7b6986cba26ed18d1d3",
+        working_dir="qtbase",
+        when="@5.12.1: %apple-clang@15:",
+    )
+    conflicts("%apple-clang@15:", when="@:5.12.0")
 
     # Spack path substitution uses excessively long paths that exceed the hard-coded
     # limit of 256 used by teh generated code with the prefix path as string literals
     # causing qt to fail in ci.  This increases that limit to 1024.
     patch("qt59-qtbase-qtconfig256.patch", working_dir="qtbase", when="@5.9:5")
 
+    # with gcc@14: RapidJSON fails to build
+    # https://github.com/Tencent/rapidjson/issues/2277
+    # https://github.com/Tencent/rapidjson/pull/719
+    patch(
+        "https://patch-diff.githubusercontent.com/raw/Tencent/rapidjson/pull/719.patch?full_index=1",
+        sha256="ce341a69d6c17852fddd5469b6aabe995fd5e3830379c12746a18c3ae858e0e1",
+        working_dir="qtlocation/src/3rdparty/mapbox-gl-native/deps/rapidjson/1.1.0",
+        when="@5.9.2: %gcc@14:",
+    )
+
     conflicts("%gcc@10:", when="@5.9:5.12.6 +opengl")
     conflicts("%gcc@11:", when="@5.8")
     conflicts("%apple-clang@13:", when="@:5.13")
 
     # Build-only dependencies
-    depends_on("pkgconfig", type="build")
+    for plat in ["linux", "darwin", "freebsd"]:
+        with when(f"platform={plat}"):
+            depends_on("pkgconfig", type="build")
+            depends_on("libsm", when="@3")
+            depends_on("glib", when="@4:")
+            depends_on("libmng")
+            depends_on("assimp@5.0.0:5", when="@5.5:+opengl")
+            depends_on("sqlite+column_metadata", when="+sql", type=("build", "run"))
+            depends_on("inputproto", when="@:5.8")
+            depends_on("gmake", type="build")
+
+    for plat in ["linux", "freebsd"]:
+        with when(f"platform={plat} +gui"):
+            depends_on("fontconfig")
+            depends_on("libsm")
+            depends_on("libx11")
+            depends_on("libxcb")
+            depends_on("libxkbcommon")
+            depends_on("xcb-util-image")
+            depends_on("xcb-util-keysyms")
+            depends_on("xcb-util-renderutil")
+            depends_on("xcb-util-wm")
+            depends_on("libxext")
+            depends_on("libxrender")
+
+        conflicts("+framework", msg="QT cannot be built as a framework except on macOS.")
+
+    with when("platform=windows +sql"):
+        # Windows sqlite has no column_metadata variant unlike all other platforms
+        depends_on("sqlite", type=("build", "run"))
+
+    with when("platform=darwin"):
+        conflicts("@:4.8.6", msg="QT 4 for macOS is only patched for 4.8.7")
+        conflicts(
+            "target=aarch64:",
+            when="@:5.15.3",
+            msg="Apple Silicon requires a very new version of qt",
+        )
+
     depends_on("python", when="@5.7.0:", type="build")
 
     # Dependencies, then variant- and version-specific dependencies
     depends_on("icu4c")
     depends_on("jpeg")
-    depends_on("libmng")
     depends_on("libtiff")
     depends_on("libxml2")
-    depends_on("zlib")
+    depends_on("zlib-api")
     depends_on("freetype", when="+gui")
     depends_on("gtkplus", when="+gtk")
-    depends_on("sqlite+column_metadata", when="+sql", type=("build", "run"))
 
     depends_on("libpng@1.2.57", when="@3")
-    depends_on("libsm", when="@3")
     depends_on("pcre+multibyte", when="@5.0:5.8")
-    depends_on("inputproto", when="@:5.8")
 
     with when("+ssl"):
         depends_on("openssl")
         depends_on("openssl@:1.0", when="@4:5.9")
         depends_on("openssl@1.1.1:", when="@5.15.0:")
 
-    depends_on("glib", when="@4:")
     depends_on("libpng", when="@4:")
     depends_on("dbus", when="@4:+dbus")
     depends_on("gl", when="@4:+opengl")
-    depends_on("assimp@5.0.0:5", when="@5.5:+opengl")
 
     depends_on("harfbuzz", when="@5:")
     depends_on("double-conversion", when="@5.7:")
@@ -279,15 +280,6 @@ class Qt(Package):
         depends_on("bison", type="build")
         depends_on("gperf")
 
-        # qtwebengine@5.7:5.15 are based on Google Chromium versions which depend on Py2
-        with when("@5.7:5.15"):
-            depends_on("python@2.7.5:2", type="build")
-            # mesa inherits MesonPackage (since October 2020) which depends on Py@3.
-            # The conflicts('mesa') enables a regular build of `qt@5.7:5.15+webkit`
-            # without having to specify the exact version by causing the concretizer
-            # to select mesa18 which does not depend on python@3.
-            conflicts("mesa")
-
         with when("@5.10:"):
             depends_on("nss@3.62:")
 
@@ -306,47 +298,35 @@ class Qt(Package):
             depends_on("libxdamage")
             depends_on("gettext")
 
+    conflicts(
+        "+webkit",
+        when="@5.7:5.15",
+        msg="qtwebengine@5.7:5.15 are based on Google Chromium versions which depend on Py2",
+    )
+
     # gcc@4 is not supported as of Qt@5.14
     # https://doc.qt.io/qt-5.14/supported-platforms.html
     conflicts("%gcc@:4", when="@5.14:")
 
-    # Non-macOS dependencies and special macOS constraints
-    if MACOS_VERSION is None:
-        with when("+gui"):
-            depends_on("fontconfig")
-            depends_on("libsm")
-            depends_on("libx11")
-            depends_on("libxcb")
-            depends_on("libxkbcommon")
-            depends_on("xcb-util-image")
-            depends_on("xcb-util-keysyms")
-            depends_on("xcb-util-renderutil")
-            depends_on("xcb-util-wm")
-            depends_on("libxext")
-            depends_on("libxrender")
-
-        conflicts("+framework", msg="QT cannot be built as a framework except on macOS.")
-    else:
-        conflicts(
-            "platform=darwin", when="@:4.8.6", msg="QT 4 for macOS is only patched for 4.8.7"
-        )
-        conflicts(
-            "target=aarch64:",
-            when="@:5.15.3",
-            msg="Apple Silicon requires a very new version of qt",
-        )
-
-    use_xcode = True
+    # Compiling with oneAPI compilers icx, icpx requires patching
+    # This has only been tested for 5.15.14 so far
+    conflicts("%oneapi", when="@:5.15.13")
+    patch("qt51514-oneapi.patch", when="@5.15.14: %oneapi")
 
     # Mapping for compilers/systems in the QT 'mkspecs'
     compiler_mapping = {
         "intel": ("icc",),
+        # This only works because we apply patch "qt51514-oneapi.patch"
+        # above that replaces calls to "icc" with calls to "icx" in
+        # qtbase/mkspecs/*
+        "oneapi": ("icc",),
         "apple-clang": ("clang-libc++", "clang"),
         "clang": ("clang-libc++", "clang"),
+        "aocc": ("clang-libc++", "clang"),
         "fj": ("clang",),
         "gcc": ("g++",),
     }
-    platform_mapping = {"darwin": ("macx"), "cray": ("linux")}
+    platform_mapping = {"darwin": ("macx"), "windows": ("win32")}
 
     def url_for_version(self, version):
         # URL keeps getting more complicated with every release
@@ -396,7 +376,8 @@ class Qt(Package):
         return url
 
     def setup_build_environment(self, env):
-        env.set("MAKEFLAGS", "-j{0}".format(make_jobs))
+        if not IS_WINDOWS:
+            env.set("MAKEFLAGS", "-j{0}".format(make_jobs))
         if self.version >= Version("5.11"):
             # QDoc uses LLVM as of 5.11; remove the LLVM_INSTALL_DIR to
             # disable
@@ -418,9 +399,13 @@ class Qt(Package):
         env.set("QTINC", self.prefix.inc)
         env.set("QTLIB", self.prefix.lib)
         env.prepend_path("QT_PLUGIN_PATH", self.prefix.plugins)
+        if IS_WINDOWS:
+            # Force Qt to use the desktop provided GL
+            # on Windows when dependencies are building against Qt
+            env.set("QT_OPENGL", "desktop")
 
     def setup_dependent_package(self, module, dependent_spec):
-        module.qmake = Executable(join_path(self.spec.prefix.bin, "qmake"))
+        module.qmake = Executable(self.spec.prefix.bin.qmake)
 
     def get_mkspec(self):
         """Determine the mkspecs root directory and QT platform."""
@@ -452,10 +437,11 @@ class Qt(Package):
     # webkit requires libintl (gettext), but does not test for it
     # correctly, so add it here.
     def flag_handler(self, name, flags):
-        if "+webkit" in self.spec and name == "ldlibs":
-            flags.append("-lintl")
-
-        return (flags, None, None)
+        if self.name == "ldlibs":
+            spec = self.spec
+            if "+webkit" in spec and "intl" in spec["gettext"].libs.names:
+                flags.append("-lintl")
+        return self.inject_flags(name, flags)
 
     @when("@4 platform=darwin")
     def patch(self):
@@ -607,18 +593,25 @@ class Qt(Package):
             self.prefix,
             "-v",
             "-opensource",
-            "-{0}opengl".format("" if "+opengl" in spec else "no-"),
             "-{0}".format("debug" if "+debug" in spec else "release"),
             "-confirm-license",
             "-optimized-qmake",
             "-no-pch",
         ]
 
+        # Windows currently only supports the desktop provider for opengl
+        if "+opengl" in spec:
+            config_args.append("-opengl")
+            if IS_WINDOWS:
+                config_args.append("desktop")
+        else:
+            config_args.append("-no-opengl")
+
         use_spack_dep = self._dep_appender_factory(config_args)
 
         if "+gui" in spec:
             use_spack_dep("freetype")
-            if not MACOS_VERSION:
+            if spec.satisfies("platform=linux") or spec.satisfies("platform=freebsd"):
                 config_args.append("-fontconfig")
         else:
             config_args.append("-no-freetype")
@@ -656,14 +649,14 @@ class Qt(Package):
             # FIXME: those could work for other versions
             use_spack_dep("libpng")
             use_spack_dep("jpeg", "libjpeg")
-            use_spack_dep("zlib")
+            use_spack_dep("zlib-api", "zlib")
 
         if "@:5.5" in spec:
             config_args.extend(
                 [
                     # NIS is deprecated in more recent glibc,
                     # but qt-5.6.3 does not recognize this option
-                    "-no-nis",
+                    "-no-nis"
                 ]
             )
 
@@ -761,9 +754,12 @@ class Qt(Package):
                 # Errors on bluetooth even when bluetooth is disabled...
                 # at least on apple-clang%12
                 config_args.extend(["-skip", "connectivity"])
-        elif version < Version("5.15") and "+gui" in spec:
+        elif "+gui" in spec and not IS_WINDOWS:
             # Linux-only QT5 dependencies
-            config_args.append("-system-xcb")
+            if version < Version("5.9.9"):
+                config_args.append("-system-xcb")
+            else:
+                config_args.append("-xcb")
             if "+opengl" in spec:
                 config_args.append("-I{0}/include".format(spec["libx11"].prefix))
                 config_args.append("-I{0}/include".format(spec["xproto"].prefix))
@@ -783,12 +779,7 @@ class Qt(Package):
                 config_args.append("-no-feature-getentropy")
 
         if "~webkit" in spec:
-            config_args.extend(
-                [
-                    "-skip",
-                    "webengine" if version >= Version("5.6") else "qtwebkit",
-                ]
-            )
+            config_args.extend(["-skip", "webengine" if version >= Version("5.6") else "qtwebkit"])
 
         if spec.satisfies("@5.7"):
             config_args.extend(["-skip", "virtualkeyboard"])
@@ -798,6 +789,13 @@ class Qt(Package):
             # https://wayland.freedesktop.org/ubuntu16.04.html
             # https://wiki.qt.io/QtWayland
             config_args.extend(["-skip", "wayland"])
+
+        if "~location" in spec:
+            if version >= Version("5.15"):
+                config_args.extend(["-skip", "qtlocation"])
+
+        if IS_WINDOWS:
+            config_args.extend(["-skip", "qtspeech"])
 
         if "~opengl" in spec:
             config_args.extend(["-skip", "multimedia"])
@@ -809,9 +807,6 @@ class Qt(Package):
             if version >= Version("5.14"):
                 config_args.extend(["-skip", "qtquick3d"])
 
-            if version >= Version("5.15"):
-                config_args.extend(["-skip", "qtlocation"])
-
         else:
             # v5.0: qt3d uses internal-only libassimp
             # v5.5: external-only libassimp
@@ -819,34 +814,39 @@ class Qt(Package):
             # v5.9: user-selectable internal-vs-external via -assimp
             # v5.14: additional qtquick3d module uses -assimp
             # v5.15: qtquick3d switched to the -quick3d-assimp option
-            if version >= Version("5.9"):
-                use_spack_dep("assimp")
-            elif version >= Version("5.15"):
-                use_spack_dep("assimp", "quick3d-assimp")
+            if not IS_WINDOWS:
+                if version >= Version("5.9"):
+                    use_spack_dep("assimp")
+                elif version >= Version("5.15"):
+                    use_spack_dep("assimp", "quick3d-assimp")
 
         if MACOS_VERSION and "+opengl" in spec:
             # These options are only valid if 'multimedia' is enabled, i.e.
             # +opengl is selected. Force them to be off on macOS, but let other
             # platforms decide for themselves.
-            config_args.extend(
-                [
-                    "-no-pulseaudio",
-                    "-no-alsa",
-                ]
-            )
+            config_args.extend(["-no-pulseaudio", "-no-alsa"])
 
         if spec.satisfies("platform=darwin target=aarch64:"):
             # https://www.qt.io/blog/qt-on-apple-silicon
             # Not currently working for qt@5
             config_args.extend(["-device-option", "QMAKE_APPLE_DEVICE_ARCHS=arm64"])
 
+        if IS_WINDOWS:
+            global configure
+            configure = Executable("configure.bat")
         configure(*config_args)
 
     def build(self, spec, prefix):
-        make()
+        if IS_WINDOWS:
+            nmake()
+        else:
+            make()
 
     def install(self, spec, prefix):
-        make("install")
+        if IS_WINDOWS:
+            nmake("install")
+        else:
+            make("install")
 
     # Documentation generation requires the doc tools to be installed.
     # @when @run_after currently seems to ignore the 'when' restriction.

@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -13,9 +12,13 @@ class PyPyopencl(PythonPackage):
     homepage = "https://documen.tician.de/pyopencl/"
     pypi = "pyopencl/pyopencl-2020.2.2.tar.gz"
 
-    maintainers = ["matthiasdiener"]
+    maintainers("matthiasdiener")
+
+    license("MIT")
 
     version("2020.2.2", sha256="31fcc79fb6862998e98d91a624c0bd4f0ab4c5d418d199912d4d312c64e437ec")
+
+    depends_on("cxx", type="build")  # generated
 
     depends_on("ocl-icd", type=("build", "link", "run"))
     depends_on("opencl", type=("build", "link", "run"))

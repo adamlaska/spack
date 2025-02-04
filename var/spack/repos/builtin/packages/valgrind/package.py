@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -24,7 +23,13 @@ class Valgrind(AutotoolsPackage, SourcewarePackage):
     sourceware_mirror_path = "valgrind/valgrind-3.13.0.tar.bz2"
     git = "git://sourceware.org/git/valgrind.git"
 
+    license("GPL-2.0-or-later")
+
     version("develop", branch="master")
+    version("3.23.0", sha256="c5c34a3380457b9b75606df890102e7df2c702b9420c2ebef9540f8b5d56264d")
+    version("3.22.0", sha256="c811db5add2c5f729944caf47c4e7a65dcaabb9461e472b578765dd7bf6d2d4c")
+    version("3.21.0", sha256="10ce1618bb3e33fad16eb79552b0a3e1211762448a0d7fce11c8a6243b9ac971")
+    version("3.20.0", sha256="8536c031dbe078d342f121fa881a9ecd205cb5a78e639005ad570011bdb9f3c6")
     version("3.19.0", sha256="dd5e34486f1a483ff7be7300cc16b4d6b24690987877c3278d797534d6738f02")
     version("3.18.1", sha256="00859aa13a772eddf7822225f4b46ee0d39afbe071d32778da4d99984081f7f5")
     version("3.18.0", sha256="8da880f76592fe8284db98e68f6dc9095485bc2ecc88bc05b7df1f278ae7f657")
@@ -37,6 +42,9 @@ class Valgrind(AutotoolsPackage, SourcewarePackage):
     version("3.11.0", sha256="6c396271a8c1ddd5a6fb9abe714ea1e8a86fce85b30ab26b4266aeb4c2413b42")
     version("3.10.1", sha256="fa253dc26ddb661b6269df58144eff607ea3f76a9bcfe574b0c7726e1dfcb997")
     version("3.10.0", sha256="03047f82dfc6985a4c7d9d2700e17bc05f5e1a0ca6ad902e5d6c81aeb720edc9")
+
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
 
     variant("mpi", default=True, description="Activates MPI support for valgrind")
     variant("boost", default=True, description="Activates boost support for valgrind")
@@ -70,8 +78,14 @@ clang: error: unknown argument: '-static-libubsan'
     # http://valgrind.10908.n7.nabble.com/Unable-to-compile-on-Mac-OS-X-10-11-td57237.html
     patch("valgrind_3_12_0_osx.patch", when="@3.12.0 platform=darwin")
 
-    for os in ("mojave", "catalina"):
-        conflicts("os=" + os, when="@:3.15")
+    # Valgrind does not seem to support macOS. As of 3.20.0, the newest version of macOS that is
+    # supported by the official repository is 10.13 (macOS High Sierra, released in 2017).
+    # There is a fork available with macOS support: https://github.com/LouisBrunner/valgrind-macos
+    # However, this fork does not yet support 11+ or M1.
+    for os in ["mojave", "catalina", "bigsur", "monterey", "ventura"]:
+        conflicts("os=" + os)
+    for target in ["m1", "m2"]:
+        conflicts("target=" + target)
 
     def configure_args(self):
         spec = self.spec

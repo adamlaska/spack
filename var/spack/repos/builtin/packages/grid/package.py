@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -13,9 +12,13 @@ class Grid(AutotoolsPackage):
     url = "https://github.com/paboyle/Grid/archive/refs/tags/0.8.2.tar.gz"
     git = "https://github.com/paboyle/Grid.git"
 
-    maintainers = ["giordano"]
+    maintainers("giordano")
+
+    license("GPL-2.0-only")
 
     version("develop", branch="develop")
+
+    depends_on("cxx", type="build")  # generated
 
     variant(
         "comms",
@@ -73,12 +76,12 @@ class Grid(AutotoolsPackage):
         args = ["--with-gmp", "--with-mpfr"]
 
         if spec.satisfies("^intel-mkl"):
-            if "+fftw" in spec or "+lapack" in spec:
+            if spec.satisfies("+fftw") or spec.satisfies("+lapack"):
                 args.append("--enable-mkl")
         else:
-            if "+fftw" in spec:
-                args.append("--with-fftw={0}".format(self.spec["fftw"].prefix))
-            if "+lapack" in spec:
+            if spec.satisfies("+fftw"):
+                args.append("--with-fftw={0}".format(self.spec["fftw-api"].prefix))
+            if spec.satisfies("+lapack"):
                 args.append("--enable-lapack={0}".format(self.spec["lapack"].prefix))
                 # lapack is searched only as `-llapack`, so anything else
                 # wouldn't be found, causing an error.
@@ -89,12 +92,7 @@ class Grid(AutotoolsPackage):
             # and what linker to use.  In many case it'd end up building the
             # code with support for MPI but without using `mpicxx` or linking to
             # `-lmpi`, wreaking havoc.  Forcing `CXX` to be mpicxx should help.
-            args.extend(
-                [
-                    "CC={0}".format(spec["mpi"].mpicc),
-                    "CXX={0}".format(spec["mpi"].mpicxx),
-                ]
-            )
+            args.extend(["CC={0}".format(spec["mpi"].mpicc), "CXX={0}".format(spec["mpi"].mpicxx)])
 
         args += self.enable_or_disable("timers")
         args += self.enable_or_disable("chroma")

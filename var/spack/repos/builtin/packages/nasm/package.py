@@ -1,14 +1,14 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import glob
 import os
 
+import spack.build_systems.generic
 from spack.package import *
 
 
-class Nasm(Package):
+class Nasm(AutotoolsPackage, Package):
     """NASM (Netwide Assembler) is an 80x86 assembler designed for
     portability and modularity. It includes a disassembler as well."""
 
@@ -16,11 +16,19 @@ class Nasm(Package):
     url = "https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/nasm-2.14.02.tar.gz"
     list_url = "https://www.nasm.us/pub/nasm/releasebuilds"
     list_depth = 1
+    tags = ["windows"]
 
+    build_system("autotools", conditional("generic", when="platform=windows"), default="autotools")
+
+    license("BSD-2-Clause")
+
+    version("2.16.03", sha256="5bc940dd8a4245686976a8f7e96ba9340a0915f2d5b88356874890e207bdb581")
     version("2.15.05", sha256="9182a118244b058651c576baa9d0366ee05983c4d4ae1d9ddd3236a9f2304997")
     version("2.14.02", sha256="b34bae344a3f2ed93b2ca7bf25f1ed3fb12da89eeda6096e3551fd66adeae9fc")
     version("2.13.03", sha256="23e1b679d64024863e2991e5c166e19309f0fe58a9765622b35bd31be5b2cc99")
     version("2.11.06", sha256="3a72476f3cb45294d303f4d34f20961b15323ac24e84eb41bc130714979123bb")
+
+    depends_on("c", type="build")  # generated
 
     # Fix compilation with GCC 8
     # https://bugzilla.nasm.us/show_bug.cgi?id=3392461
@@ -31,11 +39,13 @@ class Nasm(Package):
         when="@2.13.03 %gcc@8:",
     )
 
-    patch("msvc.mak.patch", when="@2.15.05 platform=windows")
+    with when("platform=windows"):
+        depends_on("perl")
+        patch("msvc.mak.patch", when="@2.15.05")
 
-    conflicts("%intel@:14", when="@2.14:", msg="Intel 14 has immature C11 support")
+    conflicts("%intel@:14", when="@2.14:", msg="Intel <= 14 lacks support for C11")
 
-    depends_on("perl", when="platform=windows")
+    build_system("autotools", "generic", default="autotools")
 
     def patch(self):
         # Remove flags not recognized by the NVIDIA compiler
@@ -51,14 +61,9 @@ class Nasm(Package):
                 "configure",
             )
 
-    def install(self, spec, prefix):
-        with working_dir(self.stage.source_path, create=True):
-            configure(*["--prefix={0}".format(self.prefix)])
-            make("V=1")
-            make("install")
 
-    @when("platform=windows")
-    def install(self, spec, prefix):
+class GenericBuilder(spack.build_systems.generic.GenericBuilder):
+    def install(self, pkg, spec, prefix):
         with working_dir(self.stage.source_path, create=True):
             # build NASM with nmake
             touch("asm\\warnings.time")
@@ -81,3 +86,8 @@ class Nasm(Package):
 
             for file in rdoff:
                 install(file, self.prefix.rdoff)
+
+    def setup_dependent_build_environment(self, env, dependent_spec):
+        # This is required as NASM installs its binaries into an
+        # atypical location (i.e. flat in the prefix)
+        env.prepend_path("PATH", self.pkg.prefix)

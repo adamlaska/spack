@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -14,7 +13,9 @@ class PyPyaestro(PythonPackage):
     pypi = "pyaestro/pyaestro-0.0.1a2.tar.gz"
     git = "https://github.com/FrankD412/pyaestro"
 
-    maintainers = ["FrankD412"]
+    maintainers("FrankD412")
+
+    license("MIT")
 
     # git branches
     version("main", branch="main")

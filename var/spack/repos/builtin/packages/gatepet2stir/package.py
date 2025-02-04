@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -14,6 +13,8 @@ class Gatepet2stir(QMakePackage):
 
     version("1.3.2", sha256="c53b990e47b5856d47466cff62763d0a3bfdc12538b6842cce45271badb7a387")
 
+    depends_on("cxx", type="build")  # generated
+
     depends_on("gperftools")
     depends_on("ncurses")
     depends_on("qt@:4")
@@ -25,9 +26,7 @@ class Gatepet2stir(QMakePackage):
         return url.format(version.underscored)
 
     def qmake_args(self):
-        args = [
-            "QMAKE_LIBS=-ltcmalloc",
-        ]
+        args = ["QMAKE_LIBS=-ltcmalloc"]
         return args
 
     def install(self, spec, prefix):

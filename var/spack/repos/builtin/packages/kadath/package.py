@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -22,9 +21,13 @@ class Kadath(CMakePackage):
     homepage = "https://kadath.obspm.fr/fuka/"
     git = "https://gitlab.obspm.fr/grandcle/Kadath.git"
 
-    maintainers = ["eschnett"]
+    maintainers("eschnett")
+
+    license("GPL-3.0-or-later")
 
     version("fuka", branch="fuka")
+
+    depends_on("cxx", type="build")  # generated
 
     variant("mpi", default=True, description="Enable MPI support")
 
@@ -64,7 +67,7 @@ class Kadath(CMakePackage):
     def cmake_args(self):
         return [
             # kadath uses a non-standard option to enable MPI
-            self.define_from_variant("PAR_VERSION", "mpi"),
+            self.define_from_variant("PAR_VERSION", "mpi")
         ]
 
     def cmake(self, spec, prefix):

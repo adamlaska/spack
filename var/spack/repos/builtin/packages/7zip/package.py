@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -15,12 +14,18 @@ from spack.package import *
 class _7zip(SourceforgePackage, Package):
     """7-Zip is a file archiver for Windows"""
 
-    homepage = "https://sourceforge.net/projects/sevenzip"
+    homepage = "https://sourceforge.net/projects/sevenzip/"
     sourceforge_mirror_path = "sevenzip/files/7z2107-src.tar.xz"
+    tags = ["windows"]
 
     executables = ["7z"]
 
+    license("LGPL-2.0-only")
+
     version("21.07", sha256="213d594407cb8efcba36610b152ca4921eda14163310b43903d13e68313e1e39")
+
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
 
     variant(
         "link_type",
@@ -34,7 +39,6 @@ class _7zip(SourceforgePackage, Package):
 
     conflicts("platform=linux")
     conflicts("platform=darwin")
-    conflicts("platform=cray")
 
     # TODO: Patch on WinSDK version 10.0.20348.0 when SDK is introduced to Spack
     # This patch solves a known bug in that SDK version on the 7zip side
@@ -69,13 +73,13 @@ class _7zip(SourceforgePackage, Package):
         return arch
 
     def is_64bit(self):
-        return platform.machine().endswith("64")
+        return "64" in str(self.pkg.spec.target.family)
 
     def build(self, spec, prefix):
         link_type = "1" if "static" in spec.variants["link_type"].value else "0"
         nmake_args = [
-            "PLATFORM=%s" % self.plat_arch,
-            "MY_STATIC_LINK=%s" % link_type,
+            f"PLATFORM={self.plat_arch}",
+            f"MY_STATIC_LINK={link_type}",
             "NEW_COMPILER=1",
         ]
         # 7zips makefile is configured in such as way that if this value is set
@@ -96,10 +100,8 @@ class _7zip(SourceforgePackage, Package):
                 for ext in exts:
                     glob_str = os.path.join(pth, ext)
                     files = glob.glob(glob_str)
-                    [
+                    for x in files:
                         shutil.copy(
                             os.path.join(self._7z_src_dir, x),
                             os.path.join(prefix, os.path.basename(x)),
                         )
-                        for x in files
-                    ]

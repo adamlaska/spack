@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -16,13 +15,15 @@ class Linktest(MakefilePackage):
     )
     url = "https://apps.fz-juelich.de/jsc/linktest/download.php?version=1.2p1"
 
-    maintainers = ["pramodk"]
+    maintainers("pramodk")
 
     version(
         "1.2p1",
         sha256="981b96da1d5bf214507b8e219a36e8d0183d8bd5c10539b26f660b2c83e5269d",
         extension="tar.gz",
     )
+
+    depends_on("c", type="build")  # generated
 
     depends_on("mpi")
     depends_on("sionlib")

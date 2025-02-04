@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -27,6 +26,7 @@ class RRhtslib(RPackage):
     #             branches.
     #             Aborting
     # version("1.28.0", commit='214fde2218bdbca89f1e12a30d2e081e76915aef')
+    version("2.0.0", commit="1757333eb88625158505e5fa47840081110cf8a4")
     version("1.28.0", branch="RELEASE_3_15")
     version("1.26.0", commit="f5b20e97b283942877529f750b28398782552655")
     version("1.22.0", commit="899b79faa54d42c7c9b9a2bc49972109637d367f")
@@ -36,6 +36,8 @@ class RRhtslib(RPackage):
     version("1.12.1", commit="e3487b1355995d09b28fde5d0a7504a3e79a7203")
     version("1.10.0", commit="53dcf7dfe35d735283956c77c011a97ca3f4eb26")
     version("1.8.0", commit="3b5493473bed42958614091c58c739932ffcfa79")
+
+    depends_on("c", type="build")  # generated
 
     depends_on("r-zlibbioc", type=("build", "run"))
     depends_on("bzip2", type=("build", "link", "run"))
@@ -48,9 +50,9 @@ class RRhtslib(RPackage):
     # available
     depends_on("patchelf", type="build", when="@1.12:1.14")
 
-    patch("use_spack_Makeconf.patch", when="@1.12:")
+    patch("use_spack_Makeconf.patch", when="@1.12:1.28.0")
     patch("find_deps-1.12.patch", when="@1.12:1.14")
-    patch("find_deps-1.16.patch", when="@1.16:")
+    patch("find_deps-1.16.patch", when="@1.16:1.28.0")
 
     @when("@1.12:")
     def setup_build_environment(self, env):

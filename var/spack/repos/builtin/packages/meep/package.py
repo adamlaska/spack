@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -14,8 +13,13 @@ class Meep(AutotoolsPackage):
     git = "https://github.com/NanoComp/meep.git"
     url = "https://github.com/NanoComp/meep/archive/refs/tags/v1.21.0.tar.gz"
 
+    license("GPL-2.0-or-later")
+
     version("master", branch="master")
 
+    version("1.29.0", sha256="f63bdf6a8fbae8aad87d4f683da3a466d687848a53bbebe1d6935fb268aeeffa")
+    version("1.28.0", sha256="fe79ec9b0d0cf87c3855a1661a38f23a3100120174f7e2df8add96cafe201544")
+    version("1.25.0", sha256="3e5d6c6ef69a8cc7810bdd6d681ae494bfe7a4e91041abe5494f5c8a82d02e6f")
     version("1.21.0", sha256="71911cd2f38b15bdafe9a27ad111f706f24717894d5f9b6f9f19c6c10a0d5896")
     version(
         "1.3",
@@ -33,6 +37,9 @@ class Meep(AutotoolsPackage):
         url="http://ab-initio.mit.edu/meep/old/meep-1.1.1.tar.gz",
     )
 
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+
     variant("blas", default=True, description="Enable BLAS support")
     variant("lapack", default=True, description="Enable LAPACK support")
     variant("harminv", default=True, description="Enable Harminv support")
@@ -43,10 +50,13 @@ class Meep(AutotoolsPackage):
     variant("gsl", default=True, description="Enable GSL support")
     variant("python", default=True, description="Enable Python support")
     variant("single", default=False, description="Enable Single Precision")
+    variant("libgdsii", default=True, description="Enable libGDSII support")
+    variant("mpb", default=True, description="Enable MPB support")
+    variant("openmp", default=True, description="Enable OpenMP support")
 
-    depends_on("autoconf", type="build", when="@1.21.0")
-    depends_on("automake", type="build", when="@1.21.0")
-    depends_on("libtool", type="build", when="@1.21.0")
+    depends_on("autoconf", type="build", when="@1.21.0:")
+    depends_on("automake", type="build", when="@1.21.0:")
+    depends_on("libtool", type="build", when="@1.21.0:")
 
     depends_on("blas", when="+blas")
     depends_on("lapack", when="+lapack")
@@ -64,6 +74,8 @@ class Meep(AutotoolsPackage):
         depends_on("py-numpy")
         depends_on("swig")
         depends_on("py-mpi4py", when="+mpi")
+    depends_on("libgdsii", when="+libgdsii")
+    depends_on("mpb", when="+mpb")
 
     def configure_args(self):
         spec = self.spec
@@ -87,16 +99,6 @@ class Meep(AutotoolsPackage):
         else:
             config_args.append("--without-libctl")
 
-        if "+mpi" in spec:
-            config_args.append("--with-mpi")
-        else:
-            config_args.append("--without-mpi")
-
-        if "+hdf5" in spec:
-            config_args.append("--with-hdf5")
-        else:
-            config_args.append("--without-hdf5")
-
         if "+python" in spec:
             config_args.append("--with-python")
         else:
@@ -105,6 +107,10 @@ class Meep(AutotoolsPackage):
 
         if "+single" in spec:
             config_args.append("--enable-single")
+
+        config_args.extend(self.with_or_without("mpi"))
+        config_args.extend(self.with_or_without("hdf5"))
+        config_args.extend(self.with_or_without("openmp"))
 
         if spec.satisfies("@1.21.0:"):
             config_args.append("--enable-maintainer-mode")

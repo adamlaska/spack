@@ -1,7 +1,7 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
+import sys
 
 from spack.package import *
 
@@ -13,7 +13,13 @@ class Hypre(Package):
     homepage = "http://www.openblas.net"
     url = "http://github.com/xianyi/OpenBLAS/archive/v0.2.15.tar.gz"
 
-    version("0.2.15", "b1190f3d3471685f17cfd1ec1d252ac9")
+    version("0.2.15", md5="b1190f3d3471685f17cfd1ec1d252ac9")
 
     depends_on("lapack")
     depends_on("blas")
+
+    variant(
+        "shared",
+        default=(sys.platform != "darwin"),
+        description="Build shared library (disables static library)",
+    )

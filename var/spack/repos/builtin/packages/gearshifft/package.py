@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -12,9 +11,13 @@ class Gearshifft(CMakePackage):
     homepage = "https://github.com/mpicbg-scicomp/gearshifft"
     url = "https://github.com/mpicbg-scicomp/gearshifft/archive/v0.2.1-lw.tar.gz"
 
-    maintainers = ["zyzzyxdonta"]
+    maintainers("zyzzyxdonta")
+
+    license("Apache-2.0")
 
     version("0.4.0", sha256="15b9e4bfa1d9b4fe4ae316f289c67b7be0774cdada5bd7310df4d0e026d9d227")
+
+    depends_on("cxx", type="build")  # generated
 
     # gearshifft used the variable name `CMAKE_DEFAULT_BUILD_TYPE` which was
     # later introduced by CMake leading to an error in newer CMake versions.

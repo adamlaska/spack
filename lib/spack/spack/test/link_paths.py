@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 import os
@@ -11,9 +10,8 @@ import pytest
 import spack.paths
 from spack.compiler import _parse_non_system_link_dirs
 
-is_windows = sys.platform == "win32"
 drive = ""
-if is_windows:
+if sys.platform == "win32":
     match = re.search(r"[A-Za-z]:", spack.paths.test_path)
     if match:
         drive = match.group()
@@ -31,7 +29,7 @@ def allow_nonexistent_paths(monkeypatch):
 
 
 def check_link_paths(filename, paths):
-    with open(os.path.join(datadir, filename)) as file:
+    with open(os.path.join(datadir, filename), encoding="utf-8") as file:
         output = file.read()
     detected_paths = _parse_non_system_link_dirs(output)
 
@@ -66,17 +64,6 @@ def test_icc16_link_paths():
                 prefix, "gcc", "gcc-4.9.3", "lib64", "gcc", "x86_64-unknown-linux-gnu", "4.9.3"
             ),
             os.path.join(prefix, "gcc", "gcc-4.9.3", "lib64"),
-        ],
-    )
-
-
-def test_pgi_link_paths():
-    check_link_paths(
-        "pgcc-16.3.txt",
-        [
-            os.path.join(
-                root, "usr", "tce", "packages", "pgi", "pgi-16.3", "linux86-64", "16.3", "lib"
-            )
         ],
     )
 
@@ -210,7 +197,7 @@ def test_obscure_parsing_rules():
     ]
 
     # TODO: add a comment explaining why this happens
-    if is_windows:
+    if sys.platform == "win32":
         paths.remove(os.path.join(root, "second", "path"))
 
     check_link_paths("obscure-parsing-rules.txt", paths)

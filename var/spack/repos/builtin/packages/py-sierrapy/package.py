@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -12,7 +11,7 @@ class PySierrapy(PythonPackage):
     homepage = "https://github.com/hivdb/sierra-client/tree/master/python"
     pypi = "sierrapy/sierrapy-0.3.0.tar.gz"
 
-    maintainers = ["dorton21"]
+    maintainers("dorton21")
 
     version("0.3.0", sha256="82474b3815d79d16a480b0cc70b9f7075430ff4990f33306c880b240a3141b6e")
 

@@ -1,26 +1,16 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import fnmatch
-import os.path
+import os
 import sys
 
 import pytest
-import six
 
-from llnl.util.filesystem import (
-    HeaderList,
-    LibraryList,
-    find,
-    find_headers,
-    find_libraries,
-)
+from llnl.util.filesystem import HeaderList, LibraryList, find_headers, find_libraries
 
 import spack.paths
-
-is_windows = sys.platform == "win32"
 
 
 @pytest.fixture()
@@ -35,7 +25,7 @@ def library_list():
             "/dir3/libz.so",
             "libmpi.so.20.10.1",  # shared object libraries may be versioned
         ]
-        if not is_windows
+        if sys.platform != "win32"
         else [
             "/dir1/liblapack.lib",
             "/dir2/libpython3.6.dll",
@@ -66,27 +56,27 @@ def header_list():
 
 
 # TODO: Remove below when llnl.util.filesystem.find_libraries becomes spec aware
-plat_static_ext = "lib" if is_windows else "a"
+plat_static_ext = "lib" if sys.platform == "win32" else "a"
 
 
-plat_shared_ext = "dll" if is_windows else "so"
+plat_shared_ext = "dll" if sys.platform == "win32" else "so"
 
 
 plat_apple_shared_ext = "dylib"
 
 
-class TestLibraryList(object):
+class TestLibraryList:
     def test_repr(self, library_list):
         x = eval(repr(library_list))
         assert library_list == x
 
     def test_joined_and_str(self, library_list):
-
         s1 = library_list.joined()
         expected = " ".join(
             [
                 "/dir1/liblapack.%s" % plat_static_ext,
-                "/dir2/libpython3.6.%s" % (plat_apple_shared_ext if not is_windows else "dll"),
+                "/dir2/libpython3.6.%s"
+                % (plat_apple_shared_ext if sys.platform != "win32" else "dll"),
                 "/dir1/libblas.%s" % plat_static_ext,
                 "/dir3/libz.%s" % plat_shared_ext,
                 "libmpi.%s.20.10.1" % plat_shared_ext,
@@ -101,7 +91,8 @@ class TestLibraryList(object):
         expected = ";".join(
             [
                 "/dir1/liblapack.%s" % plat_static_ext,
-                "/dir2/libpython3.6.%s" % (plat_apple_shared_ext if not is_windows else "dll"),
+                "/dir2/libpython3.6.%s"
+                % (plat_apple_shared_ext if sys.platform != "win32" else "dll"),
                 "/dir1/libblas.%s" % plat_static_ext,
                 "/dir3/libz.%s" % plat_shared_ext,
                 "libmpi.%s.20.10.1" % plat_shared_ext,
@@ -110,7 +101,6 @@ class TestLibraryList(object):
         assert s3 == expected
 
     def test_flags(self, library_list):
-
         search_flags = library_list.search_flags
         assert "-L/dir1" in search_flags
         assert "-L/dir2" in search_flags
@@ -143,7 +133,7 @@ class TestLibraryList(object):
         assert a == "/dir1/liblapack.%s" % plat_static_ext
 
         b = library_list[:]
-        assert type(b) == type(library_list)
+        assert type(b) is type(library_list)
         assert library_list == b
         assert library_list is not b
 
@@ -161,11 +151,11 @@ class TestLibraryList(object):
         assert both == both + both
 
         # Always produce an instance of LibraryList
-        assert type(library_list + pylist) == type(library_list)
-        assert type(pylist + library_list) == type(library_list)
+        assert type(library_list + pylist) is type(library_list)
+        assert type(pylist + library_list) is type(library_list)
 
 
-class TestHeaderList(object):
+class TestHeaderList:
     def test_repr(self, header_list):
         x = eval(repr(header_list))
         assert header_list == x
@@ -228,7 +218,7 @@ class TestHeaderList(object):
         assert a == "/dir1/Python.h"
 
         b = header_list[:]
-        assert type(b) == type(header_list)
+        assert type(b) is type(header_list)
         assert header_list == b
         assert header_list is not b
 
@@ -246,8 +236,8 @@ class TestHeaderList(object):
         assert h == h + h
 
         # Always produce an instance of HeaderList
-        assert type(header_list + pylist) == type(header_list)
-        assert type(pylist + header_list) == type(header_list)
+        assert type(header_list + pylist) is type(header_list)
+        assert type(pylist + header_list) is type(header_list)
 
 
 #: Directory where the data for the test below is stored
@@ -307,7 +297,6 @@ def test_library_type_search(lib_list, kwargs):
     ],
 )
 def test_searching_order(search_fn, search_list, root, kwargs):
-
     # Test search
     result = search_fn(search_list, root, **kwargs)
 
@@ -320,7 +309,7 @@ def test_searching_order(search_fn, search_list, root, kwargs):
     rlist = list(reversed(result))
 
     # At this point make sure the search list is a sequence
-    if isinstance(search_list, six.string_types):
+    if isinstance(search_list, str):
         search_list = [search_list]
 
     # Discard entries in the order they appear in search list
@@ -334,33 +323,3 @@ def test_searching_order(search_fn, search_list, root, kwargs):
 
     # List should be empty here
     assert len(rlist) == 0
-
-
-@pytest.mark.parametrize(
-    "root,search_list,kwargs,expected",
-    [
-        (
-            search_dir,
-            "*/*bar.tx?",
-            {"recursive": False},
-            [
-                os.path.join(search_dir, os.path.join("a", "foobar.txt")),
-                os.path.join(search_dir, os.path.join("b", "bar.txp")),
-                os.path.join(search_dir, os.path.join("c", "bar.txt")),
-            ],
-        ),
-        (
-            search_dir,
-            "*/*bar.tx?",
-            {"recursive": True},
-            [
-                os.path.join(search_dir, os.path.join("a", "foobar.txt")),
-                os.path.join(search_dir, os.path.join("b", "bar.txp")),
-                os.path.join(search_dir, os.path.join("c", "bar.txt")),
-            ],
-        ),
-    ],
-)
-def test_find_with_globbing(root, search_list, kwargs, expected):
-    matches = find(root, search_list, **kwargs)
-    assert sorted(matches) == sorted(expected)

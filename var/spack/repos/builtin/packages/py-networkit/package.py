@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -20,7 +19,9 @@ class PyNetworkit(PythonPackage):
     homepage = "https://networkit.github.io/"
     pypi = "networkit/networkit-6.1.tar.gz"
 
-    maintainers = ["fabratu"]
+    maintainers("fabratu")
+
+    license("MIT")
 
     version("9.0", sha256="e27872d0d6a8a0a1ba862b0dab6adb4f0046fe6b20d3c47863075d1ee70226d3")
     version("8.1", sha256="5ff9e61496259280df4f913b1e37f51ca6f94974c4b9f623851f4d518f5ce0d5")
@@ -28,6 +29,8 @@ class PyNetworkit(PythonPackage):
     version("7.1", sha256="8609dc7a574a8a82d8880b8b1e3dfdd9c59ad67cd02135628e675c482fe98a96")
     version("7.0", sha256="eea4b5e565d6990b674e1c7f4d598be9377d57b61d0d82883ecc39edabaf3631")
     version("6.1", sha256="f7fcb50dec66a8253f85c10ff9314100de013c7578d531c81d3f71bc6cf8f093")
+
+    depends_on("cxx", type="build")  # generated
 
     # Required dependencies
     depends_on("cmake", type="build")
@@ -44,6 +47,8 @@ class PyNetworkit(PythonPackage):
     depends_on("py-scipy", type=("build", "run"))
     depends_on("py-setuptools", type="build")
     depends_on("python@3:", type=("build", "run"))
+    # in newer pip versions --install-option does not exist
+    depends_on("py-pip@:23.0", type="build")
 
     def install_options(self, spec, prefix):
         # Enable ext. core-library + parallel build

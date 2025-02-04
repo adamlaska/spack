@@ -1,9 +1,9 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
-import os.path
+import os
+import re
 import sys
 from datetime import datetime, timedelta
 from textwrap import dedent
@@ -23,7 +23,7 @@ def now():
 def module_path(tmpdir):
     m = tmpdir.join("foo.py")
     content = """
-import os.path
+import os
 
 value = 1
 path = os.path.join('/usr', 'bin')
@@ -118,6 +118,14 @@ def test_pretty_string_to_date(format, pretty_string):
     assert t1 == t2
 
 
+def test_pretty_seconds():
+    assert llnl.util.lang.pretty_seconds(2.1) == "2.100s"
+    assert llnl.util.lang.pretty_seconds(2.1 / 1000) == "2.100ms"
+    assert llnl.util.lang.pretty_seconds(2.1 / 1000 / 1000) == "2.100us"
+    assert llnl.util.lang.pretty_seconds(2.1 / 1000 / 1000 / 1000) == "2.100ns"
+    assert llnl.util.lang.pretty_seconds(2.1 / 1000 / 1000 / 1000 / 10) == "0.210ns"
+
+
 def test_match_predicate():
     matcher = match_predicate(lambda x: True)
     assert matcher("foo")
@@ -170,12 +178,12 @@ def test_key_ordering():
     with pytest.raises(TypeError):
 
         @llnl.util.lang.key_ordering
-        class ClassThatHasNoCmpKeyMethod(object):
+        class ClassThatHasNoCmpKeyMethod:
             # this will raise b/c it does not define _cmp_key
             pass
 
     @llnl.util.lang.key_ordering
-    class KeyComparable(object):
+    class KeyComparable:
         def __init__(self, t):
             self.t = t
 
@@ -230,21 +238,14 @@ def test_unequal_args(args1, kwargs1, args2, kwargs2):
     "args1,kwargs1,args2,kwargs2",
     [
         # Ensure that kwargs are stably sorted.
-        ((), {"a": 3, "b": 4}, (), {"b": 4, "a": 3}),
+        ((), {"a": 3, "b": 4}, (), {"b": 4, "a": 3})
     ],
 )
 def test_equal_args(args1, kwargs1, args2, kwargs2):
     assert stable_args(*args1, **kwargs1) == stable_args(*args2, **kwargs2)
 
 
-@pytest.mark.parametrize(
-    "args, kwargs",
-    [
-        ((1,), {}),
-        ((), {"a": 3}),
-        ((1,), {"a": 3}),
-    ],
-)
+@pytest.mark.parametrize("args, kwargs", [((1,), {}), ((), {"a": 3}), ((1,), {"a": 3})])
 def test_memoized(args, kwargs):
     @memoized
     def f(*args, **kwargs):
@@ -256,10 +257,7 @@ def test_memoized(args, kwargs):
     assert f.cache[key] == "return-value"
 
 
-@pytest.mark.parametrize(
-    "args, kwargs",
-    [(([1],), {}), ((), {"a": [1]})],
-)
+@pytest.mark.parametrize("args, kwargs", [(([1],), {}), ((), {"a": [1]})])
 def test_memoized_unhashable(args, kwargs):
     """Check that an exception is raised clearly"""
 
@@ -299,23 +297,70 @@ def test_grouped_exception():
     top-level raised TypeError: ok"""
     )
 
-    assert (
-        h.grouped_message(with_tracebacks=True)
-        == dedent(
-            """\
-    due to the following failures:
-    inner method raised ValueError: wow!
-      File "{0}", \
-line 290, in test_grouped_exception
-        inner()
-      File "{0}", \
-line 287, in inner
-        raise ValueError("wow!")
 
-    top-level raised TypeError: ok
-      File "{0}", \
-line 293, in test_grouped_exception
-        raise TypeError("ok")
+def test_grouped_exception_base_type():
+    h = llnl.util.lang.GroupedExceptionHandler()
+
+    with h.forward("catch-runtime-error", RuntimeError):
+        raise NotImplementedError()
+
+    with pytest.raises(NotImplementedError):
+        with h.forward("catch-value-error", ValueError):
+            raise NotImplementedError()
+
+    message = h.grouped_message(with_tracebacks=False)
+    assert "catch-runtime-error" in message
+    assert "catch-value-error" not in message
+
+
+def test_class_level_constant_value():
+    """Tests that the Const descriptor does not allow overwriting the value from an instance"""
+
+    class _SomeClass:
+        CONST_VALUE = llnl.util.lang.Const(10)
+
+    with pytest.raises(TypeError, match="not support assignment"):
+        _SomeClass().CONST_VALUE = 11
+
+
+def test_deprecated_property():
+    """Tests the behavior of the DeprecatedProperty descriptor, which is can be used when
+    deprecating an attribute.
     """
-        ).format(__file__)
-    )
+
+    class _Deprecated(llnl.util.lang.DeprecatedProperty):
+        def factory(self, instance, owner):
+            return 46
+
+    class _SomeClass:
+        deprecated = _Deprecated("deprecated")
+
+    # Default behavior is to just return the deprecated value
+    s = _SomeClass()
+    assert s.deprecated == 46
+
+    # When setting error_level to 1 the attribute warns
+    _SomeClass.deprecated.error_lvl = 1
+    with pytest.warns(UserWarning):
+        assert s.deprecated == 46
+
+    # When setting error_level to 2 an exception is raised
+    _SomeClass.deprecated.error_lvl = 2
+    with pytest.raises(AttributeError):
+        _ = s.deprecated
+
+
+def test_fnmatch_multiple():
+    named_patterns = {"a": "libf*o.so", "b": "libb*r.so"}
+    regex = re.compile(llnl.util.lang.fnmatch_translate_multiple(named_patterns))
+
+    a = regex.match("libfoo.so")
+    assert a and a.group("a") == "libfoo.so"
+
+    b = regex.match("libbar.so")
+    assert b and b.group("b") == "libbar.so"
+
+    assert not regex.match("libfoo.so.1")
+    assert not regex.match("libbar.so.1")
+    assert not regex.match("libfoo.solibbar.so")
+    assert not regex.match("libbaz.so")

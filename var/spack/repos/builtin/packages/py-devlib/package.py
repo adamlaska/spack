@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -12,6 +11,8 @@ class PyDevlib(PythonPackage):
     homepage = "https://github.com/ARM-software/devlib"
     url = "https://github.com/ARM-software/devlib/archive/v1.2.tar.gz"
 
+    license("Apache-2.0")
+
     version("1.2", sha256="4cdb6767a9430b49eecffe34e2b9fcbcfc7e65328122d909aa71c3d11a86503d")
     version("1.1.2", sha256="c900420cb97239b4642f5e333e43884fb09507b530edb55466e7b82103b4deaa")
     version("1.1.1", sha256="eceb7a2721197a6023bbc2bbf346663fc117e4f54e1eb8334a3085dead9c8036")
@@ -21,6 +22,8 @@ class PyDevlib(PythonPackage):
     version("0.0.3", sha256="29ec5f1de481783ab0b9efc111dfeb67c890187d56fca8592b25ee756ff32902")
     version("0.0.2", sha256="972f33be16a06572a19b67d909ee0ed6cb6f21f9a9da3c43fd0ff5851421051d")
 
+    depends_on("c", type="build")  # generated
+
     depends_on("py-setuptools", type="build")
     depends_on("py-python-dateutil", type=("build", "run"))
     depends_on("py-pexpect@3.3:", type=("build", "run"))
@@ -28,7 +31,3 @@ class PyDevlib(PythonPackage):
     depends_on("py-wrapt", type=("build", "run"))
     depends_on("py-future", type=("build", "run"))
     depends_on("py-pandas", type=("build", "run"))
-    depends_on("py-enum34", type=("build", "run"), when="^python@:3.3")
-    depends_on("py-contextlib2", type=("build", "run"), when="^python@:2")
-    depends_on("py-numpy@:1.16.4", type=("build", "run"), when="^python@:2")
-    depends_on("py-numpy", type=("build", "run"), when="^python@:3.0")

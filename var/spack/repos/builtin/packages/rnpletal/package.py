@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -24,7 +23,10 @@ class Rnpletal(AutotoolsPackage):
     # which carry no version number.
     version("develop", sha256="2886f96393b64703fccf61b3dbc34e0fa45a79297232be76352f29cb83863d4d")
 
-    maintainers = ["eschnett"]
+    depends_on("c", type="build")  # generated
+    depends_on("fortran", type="build")  # generated
+
+    maintainers("eschnett")
 
     variant(
         "packages",

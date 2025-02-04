@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -18,9 +17,13 @@ class CudaMemtest(CMakePackage):
     homepage = "https://github.com/ComputationalRadiationPhysics/cuda_memtest"
     git = "https://github.com/ComputationalRadiationPhysics/cuda_memtest.git"
 
-    maintainers = ["ax3l"]
+    maintainers("ax3l")
+
+    license("Unlicense")
 
     version("master", branch="dev")
+
+    depends_on("cxx", type="build")  # generated
 
     depends_on("cmake@2.8.5:", type="build")
     # depends_on('nvml', when='+nvml')

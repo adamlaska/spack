@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -18,7 +17,9 @@ class Liblbfgs(AutotoolsPackage):
     url = "https://github.com/downloads/chokkan/liblbfgs/liblbfgs-1.10.tar.gz"
     git = "https://github.com/chokkan/liblbfgs.git"
 
-    maintainers = ["RemiLacroix-IDRIS"]
+    maintainers("RemiLacroix-IDRIS")
+
+    license("MIT")
 
     version("master", branch="master")
     version("1.10", sha256="4158ab7402b573e5c69d5f6b03c973047a91e16ca5737d3347e3af9c906868cf")

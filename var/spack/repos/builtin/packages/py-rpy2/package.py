@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -15,6 +14,8 @@ class PyRpy2(PythonPackage):
     """
 
     pypi = "rpy2/rpy2-2.5.4.tar.gz"
+
+    license("GPL-2.0-or-later")
 
     version("3.0.4", sha256="2af5158a5d56af7f7bf5e54d8d7e87b6f115ff40f056d82f93cad0cbf6acc0cb")
     version("3.0.0", sha256="34efc2935d9015527837d6b1de29641863d184b19d39ad415d5384be8a015bce")
@@ -44,5 +45,4 @@ class PyRpy2(PythonPackage):
 
     # @:2.8.6
     depends_on("r@2.8:", when="@:2.8.6", type=("build", "run"))
-    depends_on("py-singledispatch", when="^python@:2", type=("build", "run"))
     depends_on("python@2.7:2.8,3.5:", type=("build", "run"))

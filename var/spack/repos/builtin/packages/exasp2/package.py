@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -25,12 +24,14 @@ class Exasp2(MakefilePackage):
     url = "https://github.com/ECP-copa/ExaSP2/tarball/v1.0"
     git = "https://github.com/ECP-copa/ExaSP2.git"
 
-    maintainers = ["junghans"]
+    maintainers("junghans")
 
     tags = ["proxy-app", "ecp-proxy-app"]
 
     version("develop", branch="master")
     version("1.0", sha256="59986ea70391a1b382d2ed22d5cf013f46c0c15e44ed95dcd875a917adfc6211")
+
+    depends_on("c", type="build")  # generated
 
     variant("mpi", default=True, description="Build With MPI Support")
 
@@ -46,7 +47,7 @@ class Exasp2(MakefilePackage):
     def build_targets(self):
         targets = []
         spec = self.spec
-        if "+mpi" in spec:
+        if spec.satisfies("+mpi"):
             targets.append("PARALLEL=MPI")
             targets.append("MPICC={0}".format(spec["mpi"].mpicc))
             targets.append("MPI_LIB=-L" + spec["mpi"].prefix.lib + " -lmpi")

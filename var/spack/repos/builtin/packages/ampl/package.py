@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -17,7 +16,7 @@ class Ampl(Package):
     homepage = "https://ampl.com/"
     manual_download = True
 
-    maintainers = ["robgics"]
+    maintainers("robgics")
 
     # Use the version as you would expect the user to know it, not necessarily the
     # version as it appears in the file name.  To get the checksum, use sha256sum.

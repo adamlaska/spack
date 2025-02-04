@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -16,7 +15,7 @@ class Cctools(AutotoolsPackage):
 
     homepage = "https://cctools.readthedocs.io"
     url = "https://ccl.cse.nd.edu/software/files/cctools-7.4.2-source.tar.gz"
-    maintainers = ["dthain", "btovar"]
+    maintainers("dthain", "btovar")
 
     version("7.4.2", sha256="7c8c86f09bcb9ad23ab44e52dfb5bf3a4e4a1ad84ef51e500a9c8c2371770f4b")
     version("7.2.10", sha256="4a604329896ae5e0fad7451a3814f531ff2f00a41c96e971ac08276208aa1650")
@@ -32,6 +31,9 @@ class Cctools(AutotoolsPackage):
     version("7.0.18", sha256="5b6f3c87ae68dd247534a5c073eb68cb1a60176a7f04d82699fbc05e649a91c2")
     version("6.1.1", sha256="97f073350c970d6157f80891b3bf6d4f3eedb5f031fea386dc33e22f22b8af9d")
 
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+
     depends_on("openssl")
     depends_on("perl+shared", type=("build", "run"))
     depends_on("python", type=("build", "run"))
@@ -39,7 +41,7 @@ class Cctools(AutotoolsPackage):
     depends_on("gettext")  # Corrects python linking of -lintl flag.
     depends_on("swig")
     # depends_on('xrootd')
-    depends_on("zlib")
+    depends_on("zlib-api")
     patch("arm.patch", when="target=aarch64:")
     patch("cctools_7.0.18.python.patch", when="@7.0.18")
     patch("cctools_6.1.1.python.patch", when="@6.1.1")
@@ -75,36 +77,24 @@ class Cctools(AutotoolsPackage):
 
         # make sure we do not pick a python outside spack:
         if self.spec.satisfies("@6.1.1"):
-            if self.spec.satisfies("^python@3:"):
-                args.extend(
-                    ["--with-python3-path", self.spec["python"].prefix, "--with-python-path", "no"]
-                )
-            elif self.spec.satisfies("^python@:2.9"):
-                args.extend(
-                    ["--with-python-path", self.spec["python"].prefix, "--with-python3-path", "no"]
-                )
-            else:
-                args.extend(["--with-python-path", "no", "--with-python3-path", "no"])
+            args.extend(
+                ["--with-python3-path", self.spec["python"].prefix, "--with-python-path", "no"]
+            )
         else:
             # versions 7 and above, where --with-python-path recognized the
             # python version:
-            if self.spec.satisfies("^python@3:"):
-                args.extend(
-                    ["--with-python-path", self.spec["python"].prefix, "--with-python2-path", "no"]
-                )
-            elif self.spec.satisfies("^python@:2.9"):
-                args.extend(
-                    ["--with-python-path", self.spec["python"].prefix, "--with-python3-path", "no"]
-                )
-            else:
-                args.extend(["--with-python2-path", "no", "--with-python3-path", "no"])
+            args.extend(
+                ["--with-python-path", self.spec["python"].prefix, "--with-python2-path", "no"]
+            )
 
         # disable these bits
         for p in ["mysql", "xrootd"]:
             args.append("--with-{0}-path=no".format(p))
 
         # point these bits at the Spack installations
-        for p in ["openssl", "perl", "readline", "swig", "zlib"]:
+        for p in ["openssl", "perl", "readline", "swig"]:
             args.append("--with-{0}-path={1}".format(p, self.spec[p].prefix))
+
+        args.append("--with-zlib-path={0}".format(self.spec["zlib-api"].prefix))
 
         return args

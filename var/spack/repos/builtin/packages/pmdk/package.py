@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -13,10 +12,12 @@ class Pmdk(Package):
     """
 
     homepage = "https://pmem.io/pmdk/"
-    url = "https://github.com/pmem/pmdk/archive/1.5.tar.gz"
+    url = "https://github.com/pmem/pmdk/archive/1.12.1.tar.gz"
     git = "https://github.com/pmem/pmdk.git"
+    maintainers("hyoklee")
 
     version("master", branch="master")
+    version("1.12.1", sha256="53602e4c2439957046b428187665c5ff38cb90ca50956eb917b509a2e96909a3")
     version("1.11.0", sha256="bfbc82e6bfd788c8bcb380da76172b83732d12775a719c9c423eb2fadc78bb3a")
     version("1.10", sha256="06edcd43ef267c4cc70754d5d1a5d88aeb9f2086bc014bf2594df4c5efd8cc4e")
     version("1.9.2", sha256="6bca98ecf9e036603951024b7436d688cd1907b2d8c428373697fafff4096a4f")
@@ -29,11 +30,17 @@ class Pmdk(Package):
     version("1.6", sha256="3b99e6c30709326a94d2e73a9247a8dfb58d0a394c5b7714e5c3d8a3ad2e2e9f")
     version("1.5", sha256="6b069d7207febeb62440e89245e8b18fcdf40b6170d2ec2ef33c252ed16db2d4")
 
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+
     variant("ndctl", default=False, description="Build components requiring ndctl")
     variant("doc", default=False, description="Build documentation")
     variant("experimental", default=False, description="Build experimental stuff")
     variant("rpmem", default=False, description="Build remote persistent memory components")
 
+    depends_on("gmake", type="build")
+    depends_on("cmake", type="build")
+    depends_on("pkgconfig", when="@1.12.1:", type="build")
     depends_on("ncurses", when="@1.6:")
     depends_on("libfabric", when="+rpmem")
     # documentation requires doxygen and a bunch of other dependencies

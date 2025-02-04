@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -44,11 +43,8 @@ import glob
 import os
 import re
 
-import llnl.util.tty as tty
-
 from spack.package import *
 from spack.pkg.builtin.boost import Boost
-from spack.util.environment import EnvironmentModifications
 
 # Not the nice way of doing things, but is a start for refactoring
 __all__ = [
@@ -258,15 +254,23 @@ class Openfoam(Package):
     in 2004.
     """
 
-    maintainers = ["olesenm"]
+    maintainers("olesenm")
     homepage = "https://www.openfoam.com/"
     url = "https://sourceforge.net/projects/openfoam/files/v1906/OpenFOAM-v1906.tgz"
     git = "https://develop.openfoam.com/Development/openfoam.git"
     list_url = "https://sourceforge.net/projects/openfoam/files/"
     list_depth = 2
 
+    license("GPL-3.0-or-later")
+
     version("develop", branch="develop", submodules="True")
     version("master", branch="master", submodules="True")
+    version("2312", sha256="f113183a4d027c93939212af8967053c5f8fe76fb62e5848cb11bbcf8e829552")
+    version("2306", sha256="d7fba773658c0f06ad17f90199565f32e9bf502b7bb03077503642064e1f5344")
+    version(
+        "2212_230612", sha256="604cd731173ec2a3645c838cf2468fae050a35c6340e2ca7c157699899d904c0"
+    )
+    version("2212", sha256="0a3ddbfea9abca04c3a811e72fcbb184c6b1f92c295461e63b231f1a97e96476")
     version("2206", sha256="db95eda4afb97ca870733b2d4201ef539099d0778e3f3eca9a075d4f1a0eea46")
     version(
         "2112_220610", sha256="e07fd7220520e4bcfd6c8100a7e027fba13eeca2b11085c9dd4642758422a63d"
@@ -325,8 +329,9 @@ class Openfoam(Package):
     version("1706", sha256="7779048bb53798d9a5bd2b2be0bf302c5fd3dff98e29249d6e0ef7eeb83db79a")
     version("1612", sha256="2909c43506a68e1f23efd0ca6186a6948ae0fc8fe1e39c78cc23ef0d69f3569d")
 
-    variant("float32", default=False, description="Use single-precision")
-    variant("spdp", default=False, description="Use single/double mixed precision")
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+
     variant("int64", default=False, description="With 64-bit labels")
     variant("knl", default=False, description="Use KNL compiler settings")
     variant("kahip", default=False, description="With kahip decomposition")
@@ -341,6 +346,13 @@ class Openfoam(Package):
     variant(
         "source", default=True, description="Install library/application sources and tutorials"
     )
+    variant(
+        "precision",
+        default="dp",
+        description="Precision option",
+        values=("sp", "dp", conditional("spdp", when="@1906:")),
+        multi=False,
+    )
 
     depends_on("mpi")
 
@@ -348,7 +360,7 @@ class Openfoam(Package):
     # but particular mixes of mpi versions and InfiniBand may not work so well
     # conflicts('^openmpi~thread_multiple', when='@1712:')
 
-    depends_on("zlib")
+    depends_on("zlib-api")
     depends_on("fftw-api")
 
     # TODO: replace this with an explicit list of components of Boost,
@@ -356,8 +368,12 @@ class Openfoam(Package):
     # See https://github.com/spack/spack/pull/22303 for reference
     depends_on(Boost.with_default_variants)
 
-    # OpenFOAM does not play nice with CGAL 5.X
-    depends_on("cgal@:4")
+    # Earlier versions of OpenFOAM may not work with CGAL 5.6. I do
+    # not know which OpenFOAM added support for 5.x and conservatively
+    # use 2312 in the check.
+    depends_on("cgal", when="@2312:")
+    depends_on("cgal@:4", when="@:2306")
+
     # The flex restriction is ONLY to deal with a spec resolution clash
     # introduced by the restriction within scotch!
     depends_on("flex@:2.6.1,2.6.4:")
@@ -374,7 +390,7 @@ class Openfoam(Package):
     depends_on("parmgridgen", when="+mgridgen", type="build")
     depends_on("zoltan", when="+zoltan")
     depends_on("vtk", when="+vtk")
-    depends_on("adios2", when="@1912:")
+    depends_on("adios2~fortran", when="@1912:")
 
     # For OpenFOAM plugins and run-time post-processing this should just be
     # 'paraview+plugins' but that resolves poorly.
@@ -385,6 +401,9 @@ class Openfoam(Package):
     depends_on("paraview@5.4:", when="@1706:+paraview")
     # 1612 plugins need older paraview
     depends_on("paraview@:5.0.1", when="@1612+paraview")
+
+    # Icx only support from v2106 onwards
+    conflicts("%oneapi", when="@:2012", msg="OneAPI compiler not supported. Try v2106 or greater.")
 
     # General patches
     common = ["spack-Allwmake", "README-spack"]
@@ -397,6 +416,12 @@ class Openfoam(Package):
         "https://develop.openfoam.com/Development/openfoam/commit/8831dfc58b0295d0d301a78341dd6f4599073d45.patch",
         when="@1806",
         sha256="531146be868dd0cda70c1cf12a22110a38a30fd93b5ada6234be3d6c9256c6cf",
+    )
+    # Fix: missing std::array include (searchable sphere)
+    patch(
+        "https://develop.openfoam.com/Development/openfoam/commit/b4324b1297761545d5b10f50b60ab29e71c172aa.patch",
+        when="@2012_220610",
+        sha256="bad4b0e80fd26ea702bce9ccfb925edbbaa3308f70392fe6da2c7671b1d39bea",
     )
 
     # Some user config settings
@@ -486,7 +511,7 @@ class Openfoam(Package):
                         "(FOAM|WM)_.*USER_.*",
                     ],
                     whitelist=[  # Whitelist these
-                        "MPI_ARCH_PATH",  # Can be required for compilation
+                        "MPI_ARCH_PATH"  # Can be required for compilation
                     ],
                 )
 
@@ -560,7 +585,7 @@ class Openfoam(Package):
         # Avoid WM_PROJECT_INST_DIR for ThirdParty
         # This modification is non-critical
         edits = {
-            "WM_THIRD_PARTY_DIR": r"$WM_PROJECT_DIR/ThirdParty  #SPACK: No separate third-party",
+            "WM_THIRD_PARTY_DIR": r"$WM_PROJECT_DIR/ThirdParty  #SPACK: No separate third-party"
         }
         rewrite_environ_files(  # etc/{bashrc,cshrc}
             edits, posix=join_path("etc", "bashrc"), cshell=join_path("etc", "cshrc")
@@ -667,11 +692,13 @@ class Openfoam(Package):
             "CGAL": [
                 ("BOOST_ARCH_PATH", spec["boost"].prefix),
                 ("CGAL_ARCH_PATH", spec["cgal"].prefix),
+                ("MPFR_ARCH_PATH", spec["mpfr"].prefix),
                 (
                     "LD_LIBRARY_PATH",
                     foam_add_lib(
                         pkglib(spec["boost"], "${BOOST_ARCH_PATH}"),
                         pkglib(spec["cgal"], "${CGAL_ARCH_PATH}"),
+                        pkglib(spec["mpfr"], "${MPFR_ARCH_PATH}"),
                     ),
                 ),
             ],
@@ -711,14 +738,10 @@ class Openfoam(Package):
             }
 
         if "+kahip" in spec:
-            self.etc_config["kahip"] = {
-                "KAHIP_ARCH_PATH": spec["kahip"].prefix,
-            }
+            self.etc_config["kahip"] = {"KAHIP_ARCH_PATH": spec["kahip"].prefix}
 
         if "+metis" in spec:
-            self.etc_config["metis"] = {
-                "METIS_ARCH_PATH": spec["metis"].prefix,
-            }
+            self.etc_config["metis"] = {"METIS_ARCH_PATH": spec["metis"].prefix}
 
         # ParaView_INCLUDE_DIR is not used in 1812, but has no ill-effect
         if "+paraview" in spec:
@@ -780,9 +803,7 @@ class Openfoam(Package):
         mkdirp(self.projectdir)
 
         # Filtering: bashrc, cshrc
-        edits = {
-            "WM_PROJECT_DIR": self.projectdir,
-        }
+        edits = {"WM_PROJECT_DIR": self.projectdir}
         etc_dir = join_path(self.projectdir, "etc")
         rewrite_environ_files(  # Adjust etc/bashrc and etc/cshrc
             edits, posix=join_path(etc_dir, "bashrc"), cshell=join_path(etc_dir, "cshrc")
@@ -869,11 +890,23 @@ class Openfoam(Package):
             ]:
                 os.symlink(f, os.path.basename(f))
 
+    # Executables like decomposePar require interface libraries for optional dependencies, but if
+    # the dependency is missing, an dummy library is used and put in lib/dummy. Allow this until
+    # the https://develop.openfoam.com/Development/openfoam/-/issues/3283 is resolved.
+    unresolved_libraries = [
+        "libkahipDecomp.so",
+        "libmetisDecomp.so",
+        "libMGridGen.so",
+        "libPstream.so",
+        "libptscotchDecomp.so",
+        "libscotchDecomp.so",
+    ]
+
 
 # -----------------------------------------------------------------------------
 
 
-class OpenfoamArch(object):
+class OpenfoamArch:
     """OpenfoamArch represents architecture/compiler settings for OpenFOAM.
     The string representation is WM_OPTIONS.
 
@@ -892,7 +925,7 @@ class OpenfoamArch(object):
         self.compiler = None  # <- %compiler
         self.arch_option = ""  # Eg, -march=knl
         self.label_size = None  # <- +int64
-        self.precision_option = "DP"  # <- +float32 | +spdp
+        self.precision_option = "DP"  # <- precision= sp | dp | spdp
         self.compile_option = kwargs.get("compile-option", "-spack")
         self.arch = None
         self.options = None
@@ -905,10 +938,10 @@ class OpenfoamArch(object):
             self.label_size = "32"
 
         # WM_PRECISION_OPTION
-        if "+spdp" in spec:
-            self.precision_option = "SPDP"
-        elif "+float32" in spec:
+        if "precision=sp" in spec:
             self.precision_option = "SP"
+        elif "precision=spdp" in spec:
+            self.precision_option = "SPDP"
 
         # Processor/architecture-specific optimizations
         if "+knl" in spec:
@@ -991,11 +1024,14 @@ class OpenfoamArch(object):
             ]
         )
 
-    def _rule_directory(self, projdir, general=False):
-        """Return the wmake/rules/ General or compiler rules directory.
+    def _rule_directory(self, projdir, general=False, common=False):
+        """Return wmake/rules/ General/common, General or
+        compiler rules directory.
         Supports wmake/rules/<ARCH><COMP> and wmake/rules/<ARCH>/<COMP>.
         """
         rules_dir = os.path.join(projdir, "wmake", "rules")
+        if common:
+            return os.path.join(rules_dir, "General", "common")
         if general:
             return os.path.join(rules_dir, "General")
 
@@ -1015,10 +1051,41 @@ class OpenfoamArch(object):
             raise InstallError("No wmake rule for {0} {1}".format(self.arch, self.compiler))
         return True
 
+    def _rule_add_rpath(self, rpath, src, dst):
+        """Create {c,c++}-spack rules in the specified project directory.
+        The compiler rules are based on the respective {cflags,cxxflags}-Opt or
+        {c,c++}Opt rules with additional rpath information for the OpenFOAM libraries.
+
+        The '-spack' rules channel spack information into OpenFOAM wmake
+        rules with minimal modification to OpenFOAM.
+        The rpath is used for the installed libpath (continue to use
+        LD_LIBRARY_PATH for values during the build).
+        """
+        # Note: the 'c' rules normally don't need rpath, since they are just
+        # used for some statically linked wmake tools, but left in anyhow.
+
+        ok = os.path.isfile(src)
+
+        if ok:
+            with open(src, "r") as infile:
+                with open(dst, "w") as outfile:
+                    for line in infile:
+                        line = line.rstrip()
+                        outfile.write(line)
+                        if re.match(r"^\S+DBUG\s*:?=", line):
+                            outfile.write(" ")
+                            outfile.write(rpath)
+                        elif re.match(r"^\S+OPT\s*:?=", line):
+                            if self.arch_option:
+                                outfile.write(" ")
+                                outfile.write(self.arch_option)
+                        outfile.write("\n")
+        return ok
+
     def create_rules(self, projdir, foam_pkg):
-        """Create {c,c++}-spack and mplib{USERMPI}
-        rules in the specified project directory.
-        The compiler rules are based on the respective {c,c++}Opt rules
+        """Create {c,c++}-spack and mplib{USERMPI} rules in the
+        specified project directory.
+        Uses General/common/{c,c++}Opt or arch-specific {c,c++}Opt rules,
         but with additional rpath information for the OpenFOAM libraries.
 
         The '-spack' rules channel spack information into OpenFOAM wmake
@@ -1036,26 +1103,20 @@ class OpenfoamArch(object):
 
         user_mpi = mplib_content(foam_pkg.spec)
         rule_dir = self._rule_directory(projdir)
+        comm_dir = self._rule_directory(projdir, False, True)
+
+        # Compiler: copy existing {c,c++}Opt or General/common/{c,c++}Opt
+        # and modify '*DBUG' value to include rpath
+
+        for lang in ["c", "c++"]:
+            gen = join_path(comm_dir, "{0}Opt".format(lang))
+            src = join_path(rule_dir, "{0}Opt".format(lang))
+            dst = join_path(rule_dir, "{0}{1}".format(lang, self.compile_option))
+
+            if not self._rule_add_rpath(rpath, src, dst):
+                self._rule_add_rpath(rpath, gen, dst)
 
         with working_dir(rule_dir):
-            # Compiler: copy existing cOpt,c++Opt and modify '*DBUG' value
-            for lang in ["c", "c++"]:
-                src = "{0}Opt".format(lang)
-                dst = "{0}{1}".format(lang, self.compile_option)
-                with open(src, "r") as infile:
-                    with open(dst, "w") as outfile:
-                        for line in infile:
-                            line = line.rstrip()
-                            outfile.write(line)
-                            if re.match(r"^\S+DBUG\s*=", line):
-                                outfile.write(" ")
-                                outfile.write(rpath)
-                            elif re.match(r"^\S+OPT\s*=", line):
-                                if self.arch_option:
-                                    outfile.write(" ")
-                                    outfile.write(self.arch_option)
-                            outfile.write("\n")
-
             # MPI rules
             for mplib in ["mplibUSERMPI"]:
                 with open(mplib, "w") as out:

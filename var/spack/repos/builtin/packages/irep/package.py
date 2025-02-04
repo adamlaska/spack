@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -14,8 +13,14 @@ class Irep(CMakePackage):
     homepage = "https://irep.readthedocs.io/"
     url = "https://github.com/LLNL/irep/archive/refs/tags/v1.0.0.tar.gz"
 
-    maintainers = ["tomstitt", "kennyweiss"]
+    maintainers("tomstitt", "kennyweiss")
 
-    version("1.0.0", "b84203ac92de824dbdc672de45cfdb9609373791c4ee84a5201fa6e4ccecc1a4")
+    license("MIT")
+
+    version("1.0.0", sha256="b84203ac92de824dbdc672de45cfdb9609373791c4ee84a5201fa6e4ccecc1a4")
+
+    depends_on("c", type="build")  # generated
+    depends_on("cxx", type="build")  # generated
+    depends_on("fortran", type="build")  # generated
 
     depends_on("lua-lang")

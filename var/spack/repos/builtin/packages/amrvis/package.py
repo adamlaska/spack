@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -16,9 +15,11 @@ class Amrvis(MakefilePackage):
     homepage = "https://github.com/AMReX-Codes/Amrvis"
     git = "https://github.com/AMReX-Codes/Amrvis.git"
 
-    maintainers = ["etpalmer63"]
+    maintainers("etpalmer63")
 
-    version("main", tag="main")
+    version("main", branch="main")
+
+    depends_on("cxx", type="build")  # generated
 
     variant(
         "dims",
@@ -55,7 +56,7 @@ class Amrvis(MakefilePackage):
 
     # Only doing gcc and clang at the moment.
     # Intel currently fails searching for mpiicc, mpiicpc, etc.
-    for comp in ["%intel", "%cce", "%nag", "%pgi", "%xl", "%xl_r"]:
+    for comp in ["%intel", "%cce", "%nag", "%xl", "%xl_r"]:
         conflicts(comp, msg="Amrvis currently only builds with gcc and clang")
 
     # Need to clone AMReX into Amrvis because Amrvis uses AMReX's source
@@ -71,10 +72,7 @@ class Amrvis(MakefilePackage):
         # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85440
         if self.spec.target.family not in ["x86_64", "ppc64le"]:
             comps = join_path("amrex", "Tools", "GNUMake", "comps")
-            maks = [
-                join_path(comps, "gnu.mak"),
-                join_path(comps, "llvm.mak"),
-            ]
+            maks = [join_path(comps, "gnu.mak"), join_path(comps, "llvm.mak")]
             for mak in maks:
                 filter_file("-lquadmath", "", mak)
 
@@ -149,7 +147,7 @@ class Amrvis(MakefilePackage):
         # We don't want an AMREX_HOME the user may have set already
         env.unset("AMREX_HOME")
         # Help force Amrvis to not pick up random system compilers
-        if "+mpi" in self.spec:
+        if self.spec.satisfies("+mpi"):
             env.set("MPI_HOME", self.spec["mpi"].prefix)
             env.set("CC", self.spec["mpi"].mpicc)
             env.set("CXX", self.spec["mpi"].mpicxx)

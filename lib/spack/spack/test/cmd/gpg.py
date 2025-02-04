@@ -1,16 +1,13 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
 import os
-import sys
 
 import pytest
 
 import llnl.util.filesystem as fs
 
-import spack.bootstrap
 import spack.util.executable
 import spack.util.gpg
 from spack.main import SpackCommand
@@ -22,26 +19,7 @@ gpg = SpackCommand("gpg")
 bootstrap = SpackCommand("bootstrap")
 mirror = SpackCommand("mirror")
 
-pytestmark = pytest.mark.skipif(sys.platform == "win32", reason="does not run on windows")
-
-
-@pytest.fixture
-def tmp_scope():
-    """Creates a temporary configuration scope"""
-
-    base_name = "internal-testing-scope"
-    current_overrides = set(
-        x.name for x in spack.config.config.matching_scopes(r"^{0}".format(base_name))
-    )
-
-    num_overrides = 0
-    scope_name = base_name
-    while scope_name in current_overrides:
-        scope_name = "{0}{1}".format(base_name, num_overrides)
-        num_overrides += 1
-
-    with spack.config.override(spack.config.InternalConfigScope(scope_name)):
-        yield scope_name
+pytestmark = pytest.mark.not_on_windows("does not run on windows")
 
 
 # test gpg command detection
@@ -59,11 +37,11 @@ def test_find_gpg(cmd_name, version, tmpdir, mock_gnupghome, monkeypatch):
 
     with tmpdir.as_cwd():
         for fname in (cmd_name, "gpgconf"):
-            with open(fname, "w") as f:
+            with open(fname, "w", encoding="utf-8") as f:
                 f.write(TEMPLATE.format(version=version))
             fs.set_executable(fname)
 
-    monkeypatch.setitem(os.environ, "PATH", str(tmpdir))
+    monkeypatch.setenv("PATH", str(tmpdir))
     if version == "undetectable" or version.endswith("1.3.4"):
         with pytest.raises(spack.util.gpg.SpackGPGError):
             spack.util.gpg.init(force=True)
@@ -74,14 +52,14 @@ def test_find_gpg(cmd_name, version, tmpdir, mock_gnupghome, monkeypatch):
 
 
 def test_no_gpg_in_path(tmpdir, mock_gnupghome, monkeypatch, mutable_config):
-    monkeypatch.setitem(os.environ, "PATH", str(tmpdir))
+    monkeypatch.setenv("PATH", str(tmpdir))
     bootstrap("disable")
     with pytest.raises(RuntimeError):
         spack.util.gpg.init(force=True)
 
 
 @pytest.mark.maybeslow
-def test_gpg(tmpdir, tmp_scope, mock_gnupghome):
+def test_gpg(tmpdir, mutable_config, mock_gnupghome):
     # Verify a file with an empty keyring.
     with pytest.raises(ProcessError):
         gpg("verify", os.path.join(mock_gpg_data_path, "content.txt"))
@@ -106,7 +84,7 @@ def test_gpg(tmpdir, tmp_scope, mock_gnupghome):
 
     # Create a file to test signing.
     test_path = tmpdir.join("to-sign.txt")
-    with open(str(test_path), "w+") as fout:
+    with open(str(test_path), "w+", encoding="utf-8") as fout:
         fout.write("Test content for signing.\n")
 
     # Signing without a private key should fail.
@@ -148,12 +126,12 @@ def test_gpg(tmpdir, tmp_scope, mock_gnupghome):
     gpg("export", "--secret", str(private_export_path))
 
     # Ensure we exported the right content!
-    with open(str(private_export_path), "r") as fd:
+    with open(str(private_export_path), "r", encoding="utf-8") as fd:
         content = fd.read()
     assert "BEGIN PGP PRIVATE KEY BLOCK" in content
 
     # and for the public key
-    with open(str(export_path), "r") as fd:
+    with open(str(export_path), "r", encoding="utf-8") as fd:
         content = fd.read()
     assert "BEGIN PGP PUBLIC KEY BLOCK" in content
 
@@ -166,7 +144,7 @@ def test_gpg(tmpdir, tmp_scope, mock_gnupghome):
     gpg("list", "--signing")
 
     test_path = tmpdir.join("to-sign-2.txt")
-    with open(str(test_path), "w+") as fout:
+    with open(str(test_path), "w+", encoding="utf-8") as fout:
         fout.write("Test content for signing.\n")
 
     # Signing with multiple signing keys is ambiguous.
@@ -211,6 +189,6 @@ def test_gpg(tmpdir, tmp_scope, mock_gnupghome):
     test_path = tmpdir.join("named_cache")
     os.makedirs("%s" % test_path)
     mirror_url = "file://%s" % test_path
-    mirror("add", "--scope", tmp_scope, "gpg", mirror_url)
+    mirror("add", "gpg", mirror_url)
     gpg("publish", "--rebuild-index", "-m", "gpg")
     assert os.path.exists("%s/build_cache/_pgp/index.json" % test_path)

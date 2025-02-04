@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -19,7 +18,7 @@ class VotcaXtp(CMakePackage):
     homepage = "https://www.votca.org"
     url = "https://github.com/votca/xtp/tarball/v1.4.1"
     git = "https://github.com/votca/xtp.git"
-    maintainers = ["junghans"]
+    maintainers("junghans")
 
     version("stable", branch="stable", deprecated=True)
     version(
@@ -77,6 +76,8 @@ class VotcaXtp(CMakePackage):
         sha256="4b53d371d6cf648c9e9e9bd1f104d349cafeaf10a02866e3f1d05c574b595a21",
         deprecated=True,
     )
+
+    depends_on("cxx", type="build")  # generated
 
     depends_on("cmake@2.8:", type="build")
     for v in [

@@ -1,5 +1,4 @@
-# Copyright 2013-2022 Lawrence Livermore National Security, LLC and other
-# Spack Project Developers. See the top-level COPYRIGHT file for details.
+# Copyright Spack Project Developers. See COPYRIGHT file for details.
 #
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 
@@ -15,9 +14,13 @@ class Banner(AutotoolsPackage):
     homepage = "https://github.com/pronovic/banner"
     url = "https://github.com/pronovic/banner/archive/refs/tags/BANNER_V1.3.5.tar.gz"
 
-    maintainers = ["cessenat"]
+    maintainers("cessenat")
+
+    license("GPL-2.0-only")
 
     version("1.3.5", sha256="fb21c42620a0a668334b5732a6216b23b3990ca5d87cf3b15f0689dc617e7fdc")
+
+    depends_on("c", type="build")  # generated
 
     def url_for_version(self, version):
         return "https://github.com/pronovic/banner/archive/refs/tags/BANNER_V{0}.tar.gz".format(
